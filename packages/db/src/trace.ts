@@ -44,6 +44,15 @@ export const inTransaction = () => transactionScope.getStore() === true;
 export function trackTransactions<D extends object>(db: D): D {
   const target = db as unknown as { transaction: (run: (tx: unknown) => unknown, config?: unknown) => unknown };
   const begin = target.transaction.bind(db);
-  target.transaction = (run, config) => begin((tx) => transactionScope.run(true, () => run(tx)), config);
+  target.transaction = (run, config) => {
+    const stack = new Error().stack?.split("\n").slice(2, 7).map((l) => l.trim().replace(/.*packages\//, "")).join(" < ");
+    const t0 = performance.now();
+    const out = begin((tx) => transactionScope.run(true, () => run(tx)), config) as Promise<unknown>;
+    return out.finally(() => {
+      const ms = performance.now() - t0;
+      const log = (globalThis as { __txlog?: number }).__txlog;
+      if (log !== undefined && ms > log) console.log("DBG TX", Math.round(ms), stack);
+    });
+  };
   return db;
 }

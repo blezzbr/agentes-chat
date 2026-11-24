@@ -144,8 +144,27 @@ describe("messages in a row (ADR 0112)", () => {
   // to 50 s, under the test's own limit below.
   const waitRunning = async () => {
     const start = Date.now();
-    while (!(await runs()).some((r) => r.status === "running")) {
-      if (Date.now() - start > 50_000) throw new Error("the run never started");
+    let last = "";
+    (globalThis as { __txlog?: number }).__txlog = 150;
+    for (;;) {
+      const t0 = Date.now();
+      const all = await runs();
+      const t1 = Date.now();
+      if (all.some((r) => r.status === "running")) break;
+      const jobs = (
+        await f.db.execute(
+          sql`select kind, status, attempts, last_error, next_attempt_at, completed_at from outbox order by created_at`,
+        )
+      ).rows;
+      const now = JSON.stringify([all.map((r) => [r.id.slice(0, 6), r.status, r.trigger, r.error, r.startedAt, r.finishedAt]), jobs]);
+      if (now !== last) console.log("DBG", t0 - start, "poll", t1 - t0, now);
+      last = now;
+      if (Date.now() - start > 50_000) {
+        const steps = (await f.db.execute(sql`select run_id, seq, kind, data::text as data from agent_run_steps order by run_id, seq`)).rows;
+        console.log("DBG steps", JSON.stringify(steps).slice(0, 6000));
+        console.log("DBG transcript", JSON.stringify(all.map((r) => r.transcript)).slice(0, 4000));
+        throw new Error("the run never started");
+      }
       await Bun.sleep(5);
     }
   };
@@ -168,7 +187,8 @@ describe("messages in a row (ADR 0112)", () => {
       const root = where === "thread" ? await post("o relatório de ontem") : null;
       const channelId = dm ?? f.general.id;
       await postIn(channelId, dm ? "oi" : "@dev oi", root?.id);
-      const drained = drainOutbox(f.db, f.handlers);
+      console.log("DBG posted", where);
+      const drained = drainOutbox(f.db, f.handlers, { onError: (j, e, o) => console.log("DBG JOBERR", j.kind, o, String(e)) });
       await waitRunning();
       await postIn(channelId, "preciso de uma coisa", root?.id);
       await postIn(channelId, "olha o relatório de ontem e me diz se bate com o quadro", root?.id);
