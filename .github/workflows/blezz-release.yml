@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+env:
+  # The backup implementation is independent of the app release and unchanged
+  # since the pinned version. The upstream v0.1.13 backup tag was not published.
+  BACKUP_IMAGE: ghcr.io/agentes-chat/backup@sha256:e659b8a2b78fe464d90a9a27ffd4a3e6d72a637e3511b518f3079669a3eb821a
+
 concurrency:
   group: blezz-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -90,7 +95,6 @@ jobs:
         run: |
           set -euo pipefail
           image="ghcr.io/blezzbr/agentes-chat:$GITHUB_REF_NAME"
-          backup="ghcr.io/agentes-chat/backup:$UPSTREAM_VERSION"
           digest() {
             docker buildx imagetools inspect "$1" | awk '$1 == "Digest:" && !seen++ { print $2 }'
           }
@@ -99,8 +103,7 @@ jobs:
           docker tag agentes-blezz:test "$image"
           docker push "$image"
           image_digest=$(digest "$image")
-          backup_digest=$(digest "$backup")
-          [[ "$image_digest" =~ ^sha256:[a-f0-9]{64}$ && "$backup_digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          [[ "$image_digest" =~ ^sha256:[a-f0-9]{64}$ ]]
 
           image_id=$(docker image inspect --format '{{.Id}}' agentes-blezz:test)
           archive_sha=$(sha256sum image.tar.gz | cut -d' ' -f1)
@@ -112,7 +115,7 @@ jobs:
           docker rm "$container"
           cat > delivery/images.env <<IMAGES
           AGENTES_IMAGE=ghcr.io/blezzbr/agentes-chat@$image_digest
-          AGENTES_BACKUP_IMAGE=ghcr.io/agentes-chat/backup@$backup_digest
+          AGENTES_BACKUP_IMAGE=$BACKUP_IMAGE
           UPSTREAM_VERSION=$UPSTREAM_VERSION
           APP_IMAGE_ID=$image_id
           APP_ARCHIVE_SHA256=$archive_sha

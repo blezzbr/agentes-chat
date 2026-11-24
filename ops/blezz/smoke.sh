@@ -11,7 +11,7 @@ url=http://127.0.0.1:3300
   printf 'AGENTES_SECRET=%s\n' "$(openssl rand -base64 48)"
   printf 'POSTGRES_PASSWORD=%s\n' "$(openssl rand -hex 24)"
   printf 'PUBLIC_URL=%s\nHOST_PORT=3300\nBIND_ADDRESS=127.0.0.1\n' "$url"
-  printf 'AGENTES_IMAGE=agentes-blezz:test\nAGENTES_BACKUP_IMAGE=ghcr.io/agentes-chat/backup:%s\n' "$UPSTREAM_VERSION"
+  printf 'AGENTES_IMAGE=agentes-blezz:test\nAGENTES_BACKUP_IMAGE=%s\n' "${BACKUP_IMAGE:?Set the pinned backup image}"
 } > "$work/.env"
 
 healthy() {
