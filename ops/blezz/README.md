@@ -28,8 +28,9 @@ own runtime secrets and an empty PostgreSQL database.
 CI rehearses migrations and a PostgreSQL dump and restore with synthetic data.
 For an end-to-end subscription or runner test, use a staging-only runner
 identity and a staging account. Production service state, provider sign-ins,
-tunnels and storage destinations must remain private. If the GHCR package is
-restricted, authenticate on the host using an approved read-only identity.
+tunnels and storage destinations must remain private. If the GHCR package is restricted, use the release's image archive:
+`sudo bash stage.sh /path/to/blezz-image-linux-amd64.tar.gz`. Staging verifies
+the archive's checksum and the loaded image ID against the release bundle.
 
 ## Production promotion
 
