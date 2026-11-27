@@ -1,0 +1,8 @@
+{
+  "changes": [
+    "Release com numeração própria da Blezz e base oficial registrada no pacote, nos metadados da imagem e nas notas.",
+    "CI seletivo por área alterada e publicação no Docker Hub para Linux amd64 e arm64.",
+    "Repositórios padronizados como blezz-agentes-chat no GitHub e no Docker Hub.",
+    "O produto usa o código da base oficial v0.1.18. As correções de login e execução do Antigravity vieram do upstream."
+  ]
+}

@@ -17,16 +17,43 @@ migration path from the version actually installed.
 ## Validate and publish
 
 Pull requests to `blezz` run checks for affected areas and changed test files.
-Changes limited to documentation do not trigger the workflow. The release
-workflow runs explicitly when a tag of the form `blezz-vMAJOR.MINOR.PATCH` is
-pushed. A manual run on `blezz` builds and tests both architectures without
-publishing. Both workflows use standard GitHub-hosted runners.
+Ordinary documentation edits skip the workflow. A manual run on `blezz`
+builds and tests both architectures without publishing. Both workflows use
+standard GitHub-hosted runners.
 
-The Blezz tag is independent of the upstream version. The release notes, the
-delivery bundle's `upstream.json` and the image labels carry the source revision
-and upstream base. Each release publishes the verified Linux amd64 and arm64
-images under one versioned Docker Hub tag and pins the index by digest in the
-delivery bundle. The bundle also includes the matching Compose and runner.
+Set the stable upstream base in `upstream.json`, then run:
+
+```sh
+python3 ops/blezz/release.py next-tag
+```
+
+The result is `blezz-v<upstream-version>-r<N>`. A new base starts at `r1`. On
+the same base the script increments the highest published revision. For example,
+`blezz-v0.1.18-r2` becomes `blezz-v0.1.18-r3`, or `blezz-v0.1.19-r1` after a
+base update. The earlier `blezz-v1.0.0` tag remains valid and is the starting
+point for the release note comparison. For an unpublished release, keep the same
+tag and retry its workflow.
+
+Before pushing a release tag, commit
+`ops/blezz/changes/<tag>.json` with a `changes` array describing the Blezz
+changes since the preceding published release. Review the fork diff and include
+product or operations changes. Use `{"changes":[]}` when only the upstream base
+changed. Preview the notes before release:
+
+```sh
+python3 ops/blezz/release.py notes "$tag" --output /tmp/blezz-release-notes.md
+```
+
+CI validates the calculated revision and generates two distinct sections.
+The first lists Blezz changes. The second copies the complete official server
+release notes in version order from after the previous base through the new
+base, even when intermediate versions were skipped for deployment. A release
+on the same base records that fact and includes its notes for reference. If the GitHub body limit is reached, the
+complete Markdown remains available in the attached `release-notes.md`.
+
+Each release publishes the tested Linux amd64 and arm64 images under the
+versioned Docker Hub tag, pins the index by digest, and carries the source
+revision, upstream base, matching Compose and runner in the delivery bundle.
 
 Publishing needs a Docker Hub token with read/write access stored in the GitHub
 repository secret `DOCKERHUB_TOKEN`. Pulls from the public repository require no

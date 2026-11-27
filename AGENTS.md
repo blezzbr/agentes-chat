@@ -24,9 +24,14 @@ upstream. Infrastructure records and private operating details live in the separ
 
 ## Build and delivery
 
-- Use independent `blezz-vMAJOR.MINOR.PATCH` tags. The upstream version may advance by several
-  releases. Preserve published Blezz tags. Source provenance belongs in the OCI labels,
-  release notes and delivery bundle. The server reports the upstream application version.
+- Use `blezz-v<upstream-version>-r<N>` tags. Run `python3 ops/blezz/release.py next-tag`
+  to get the next number. A new upstream base starts at `r1`; the same base increments
+  its latest published revision. Preserve historical and published tags. The server reports
+  the upstream application version.
+- Commit `ops/blezz/changes/<tag>.json` after reviewing the fork diff. List Blezz changes
+  since the prior release or use an empty changes array if the release only adopts upstream.
+  CI validates the tag, puts Blezz changes in their own section and includes the full official
+  notes for every published server version adopted since the prior base.
 - Keep [CI](.github/workflows/blezz-ci.yml) selective by changed area. Documentation-only edits
   should skip the builds. The explicit tag runs the [release workflow](.github/workflows/blezz-release.yml)
   on standard cloud GitHub Actions runners for Linux amd64 and arm64.

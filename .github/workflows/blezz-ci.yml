@@ -64,6 +64,7 @@ jobs:
           AGENTES_IMAGE: agentes-blezz:test
           POSTGRES_PASSWORD: ci-only-placeholder
         run: |
+          python3 -m unittest discover -s ops/blezz -p "test_release.py"
           for script in ops/blezz/*.sh; do bash -n "$script"; done
           project=$(mktemp -d)
           touch "$project/.env"

@@ -13,12 +13,41 @@ env:
   BACKUP_IMAGE: ghcr.io/agentes-chat/backup@sha256:e659b8a2b78fe464d90a9a27ffd4a3e6d72a637e3511b518f3079669a3eb821a
 
 concurrency:
-  group: blezz-release-${{ github.ref }}
+  group: ${{ github.ref_type == 'tag' && 'blezz-tag-release' || format('blezz-release-{0}', github.ref) }}
   cancel-in-progress: false
 
 jobs:
+  notes:
+    if: github.repository == 'blezzbr/blezz-agentes-chat' && github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Validate revision and generate release notes
+        run: |
+          python3 ops/blezz/release.py notes "$GITHUB_REF_NAME" \
+            --image "$DOCKERHUB_IMAGE:$GITHUB_REF_NAME" \
+            --output release-notes.md --github-body github-release-body.md
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-notes
+          path: |
+            release-notes.md
+            github-release-body.md
+          if-no-files-found: error
+          retention-days: 1
+
   build:
-    if: github.repository == 'blezzbr/blezz-agentes-chat'
+    needs: notes
+    if: >-
+      !cancelled() && github.repository == 'blezzbr/blezz-agentes-chat' &&
+      (github.event_name == 'workflow_dispatch' || needs.notes.result == 'success')
     strategy:
       fail-fast: false
       matrix:
@@ -41,9 +70,6 @@ jobs:
           revision=$(jq -er .revision ops/blezz/upstream.json)
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && "$revision" =~ ^[0-9a-f]{40}$ ]]
           [[ "$(jq -er .version apps/server/package.json)" == "$version" ]]
-          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
-            [[ "$GITHUB_REF_NAME" =~ ^blezz-v[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          fi
           printf 'version=%s\nrevision=%s\n' "$version" "$revision" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
       - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
@@ -107,7 +133,7 @@ jobs:
 
   publish:
     if: github.repository == 'blezzbr/blezz-agentes-chat' && github.ref_type == 'tag'
-    needs: build
+    needs: [notes, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -120,6 +146,9 @@ jobs:
           pattern: delivery-*
           merge-multiple: true
           path: delivery
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-notes
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
@@ -136,7 +165,6 @@ jobs:
           digest=$(docker buildx imagetools inspect "$image" | awk '$1 == "Digest:" && !seen++ {print $2}')
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           version=$(jq -er .version delivery/upstream.json)
-          revision=$(jq -er .revision delivery/upstream.json)
           printf 'AGENTES_IMAGE=%s@%s\nAGENTES_BACKUP_IMAGE=%s\nUPSTREAM_VERSION=%s\n' \
             "$DOCKERHUB_IMAGE" "$digest" "$BACKUP_IMAGE" "$version" > delivery/images.env
           (
@@ -144,10 +172,8 @@ jobs:
             sha256sum docker-compose.yml stage.sh agentes-runner.mjs images.env upstream.json amd64.digest arm64.digest > SHA256SUMS
           )
           tar -czf blezz-delivery.tar.gz -C delivery .
-          {
-            printf 'Upstream [v%s](https://github.com/agentes-chat/agentes-chat/releases/tag/v%s), commit `%s`.\n\n' "$version" "$version" "$revision"
-            printf 'Image `%s@%s` for Linux amd64 and arm64.\n\n' "$DOCKERHUB_IMAGE" "$digest"
-            jq -r '(.backports + (.included_fixes // []))[] | "- " + .description + " (" + .source + ")"' delivery/upstream.json
-          } > release-notes.md
-          gh release create -R "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" blezz-delivery.tar.gz \
-            --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md
+          for notes in release-notes.md github-release-body.md; do
+            printf '\n## Digest da imagem\n\n`%s@%s`\n' "$DOCKERHUB_IMAGE" "$digest" >> "$notes"
+          done
+          gh release create -R "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" blezz-delivery.tar.gz release-notes.md \
+            --verify-tag --title "$GITHUB_REF_NAME" --notes-file github-release-body.md
