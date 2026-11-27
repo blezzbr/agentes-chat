@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   checks:
-    if: github.repository == 'blezzbr/agentes-chat'
+    if: github.repository == 'blezzbr/blezz-agentes-chat'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:

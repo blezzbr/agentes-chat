@@ -18,7 +18,7 @@ fi
 app_image=$(sed -n 's/^AGENTES_IMAGE=//p' "$bundle/images.env")
 backup_image=$(sed -n 's/^AGENTES_BACKUP_IMAGE=//p' "$bundle/images.env")
 version=$(sed -n 's/^UPSTREAM_VERSION=//p' "$bundle/images.env")
-[[ "$app_image" =~ ^docker\.io/klausgibin/blezz-workspace@sha256:[0-9a-f]{64}$ ]]
+[[ "$app_image" =~ ^docker\.io/klausgibin/blezz-agentes-chat@sha256:[0-9a-f]{64}$ ]]
 [[ "$backup_image" =~ ^ghcr\.io/agentes-chat/backup@sha256:[0-9a-f]{64}$ ]]
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 

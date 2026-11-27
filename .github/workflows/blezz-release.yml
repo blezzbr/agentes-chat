@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  DOCKERHUB_IMAGE: docker.io/klausgibin/blezz-workspace
+  DOCKERHUB_IMAGE: docker.io/klausgibin/blezz-agentes-chat
   BACKUP_IMAGE: ghcr.io/agentes-chat/backup@sha256:e659b8a2b78fe464d90a9a27ffd4a3e6d72a637e3511b518f3079669a3eb821a
 
 concurrency:
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.repository == 'blezzbr/agentes-chat'
+    if: github.repository == 'blezzbr/blezz-agentes-chat'
     strategy:
       fail-fast: false
       matrix:
@@ -56,7 +56,7 @@ jobs:
             org.opencontainers.image.title=Blezz Workspace
             org.opencontainers.image.description=Blezz fork of agentes.chat
             org.opencontainers.image.licenses=AGPL-3.0-only
-            org.opencontainers.image.source=https://github.com/blezzbr/agentes-chat
+            org.opencontainers.image.source=https://github.com/blezzbr/blezz-agentes-chat
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ github.ref_name }}
             br.blezz.upstream.image=ghcr.io/agentes-chat/agentes:${{ steps.metadata.outputs.version }}
@@ -106,7 +106,7 @@ jobs:
           retention-days: 1
 
   publish:
-    if: github.repository == 'blezzbr/agentes-chat' && github.ref_type == 'tag'
+    if: github.repository == 'blezzbr/blezz-agentes-chat' && github.ref_type == 'tag'
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -147,7 +147,7 @@ jobs:
           {
             printf 'Upstream [v%s](https://github.com/agentes-chat/agentes-chat/releases/tag/v%s), commit `%s`.\n\n' "$version" "$version" "$revision"
             printf 'Image `%s@%s` for Linux amd64 and arm64.\n\n' "$DOCKERHUB_IMAGE" "$digest"
-            jq -r '.backports[] | "- " + .description + " (" + .source + ")"' delivery/upstream.json
+            jq -r '(.backports + (.included_fixes // []))[] | "- " + .description + " (" + .source + ")"' delivery/upstream.json
           } > release-notes.md
           gh release create -R "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" blezz-delivery.tar.gz \
             --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md

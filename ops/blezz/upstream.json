@@ -1,8 +1,9 @@
 {
   "repository": "https://github.com/agentes-chat/agentes-chat",
-  "version": "0.1.17",
-  "revision": "42e83764355812f52b797d14641a2e3f3c482120",
-  "backports": [
+  "version": "0.1.18",
+  "revision": "bc32040354530eb1c7ebb39c81ab9076ab001301",
+  "backports": [],
+  "included_fixes": [
     {
       "source": "https://github.com/agentes-chat/agentes-chat/pull/1535",
       "revision": "ab5ef12104ed2e826e6534a4098011f835b10ad0",
