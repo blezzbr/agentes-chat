@@ -1,0 +1,39 @@
+name: Atualizar base oficial
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Simular merge e detectar conflitos sem abrir PR"
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: blezz-upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'blezzbr/blezz-agentes-chat' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.BLEZZ_SYNC_TOKEN || github.token }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.BLEZZ_SYNC_TOKEN || github.token }}
+      - name: Prepare upstream update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          args=()
+          if [[ "$DRY_RUN" == true ]]; then args+=(--dry-run); fi
+          python3 ops/blezz/sync_upstream.py "${args[@]}"

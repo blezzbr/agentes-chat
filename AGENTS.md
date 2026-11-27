@@ -3,12 +3,17 @@
 Respond to Klaus in Brazilian Portuguese. Write technical documentation, commands and identifiers in English.
 
 This is the Blezz fork of `agentes-chat/agentes-chat`. The canonical public source is
-`blezzbr/blezz-agentes-chat`, the default working branch is `blezz`, and the local Git remotes
+`blezzbr/blezz-agentes-chat`, the default working branch is `main`, and the local Git remotes
 are `origin` (Blezz) and `upstream` (Agentes.chat). Upstream issues and pull requests remain
 upstream. Infrastructure records and private operating details live in the separate
 `agentes-chat-gerenciamento` workspace. Read its `AGENTS.md` and runbook before deployment.
 
 ## Upstream changes
+
+- Run the [manual upstream sync workflow](.github/workflows/blezz-sync-upstream.yml) on `main`.
+  Open the PR from the run summary if organization policy blocks automatic creation.
+  Resolve conflicts in the PR branch and use a merge commit. Build and publication
+  remain a separate tag operation. See the [sync runbook](ops/blezz/README.md).
 
 - Base releases on an explicit upstream stable server tag. Read the upstream release notes for
   intermediate versions too when advancing several releases at once. Use that tag's Dockerfile

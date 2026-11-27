@@ -7,8 +7,31 @@ license and the terms in NOTICE.
 
 ## Track upstream
 
-The `blezz` branch is the release branch. Fetch the exact upstream stable tag
-and merge it when adopting that version. Update `upstream.json` with the server
+The `main` branch is the release branch. Run **Atualizar base oficial** from
+GitHub Actions on `main`. It selects the highest published stable upstream
+server release and prepares a PR to `main`. Use **Create a merge commit** to keep
+the upstream tag in the fork's ancestry. Review the linked release notes and
+approve CI if GitHub asks. The workflow does not merge, tag, publish or deploy.
+The sync keeps the fork's `.github/workflows` files.
+
+If GitHub organization policy blocks PR creation with the default workflow
+token, the run summary links to the prepared comparison. Open the PR from
+there using the summary's notes. For automatic PR creation under that policy,
+set the `BLEZZ_SYNC_TOKEN` Actions secret to a fine-grained personal access
+token scoped to this repository with **Contents** and **Pull requests** set to
+**Read and write**. The organization may require token approval.
+
+A conflict opens a draft PR based on the upstream tag. On its head branch,
+merge `origin/main`, resolve the conflicts, and record the upstream tag from
+the PR before committing and pushing:
+
+```sh
+git fetch upstream tag <official-tag>
+python3 ops/blezz/sync_upstream.py --record <official-tag>
+git add ops/blezz/upstream.json
+```
+
+Review `ops/blezz/upstream.json` after the merge. Update `upstream.json` with the server
 version, upstream commit and backports that remain in the build. If upstream
 ships a backport, review the merge and remove its entry. Intermediate versions
 can be skipped for deployment. Read their official release notes and check the
@@ -16,8 +39,8 @@ migration path from the version actually installed.
 
 ## Validate and publish
 
-Pull requests to `blezz` run checks for affected areas and changed test files.
-Ordinary documentation edits skip the workflow. A manual run on `blezz`
+Pull requests to `main` run checks for affected areas and changed test files.
+Ordinary documentation edits skip the workflow. A manual run on `main`
 builds and tests both architectures without publishing. Both workflows use
 standard GitHub-hosted runners.
 
