@@ -64,8 +64,9 @@ describe("a personal workspace's sidebar", () => {
     await go(personal());
     const me = within(top()).getByRole("button", { name: /^Conta: / });
     expect(me.textContent).toContain("Walter");
-    // My row, not the workspace's: my name wraps whole there, never cut.
+    // My row, not the workspace's: my name on one line beside my face, the button saying it whole as its title.
     expect(me.classList.contains("sidebar__org-button--me")).toBe(true);
+    expect(me.getAttribute("title")).toContain(me.querySelector(".sidebar__org-name")?.textContent ?? "-");
     expect(within(top()).queryAllByRole("link")).toHaveLength(0);
     expect(within(nav()).getByRole("link", { name: "Caixa de entrada" }).getAttribute("href")).toBe(
       `/org/${ORG_ID}/notifications`,
@@ -120,13 +121,14 @@ describe("a personal workspace's sidebar", () => {
       .map((l) => l.querySelector(".ac-menu__label")?.firstChild?.textContent);
     expect(names).toEqual([
       "Início",
-      "Propostas de melhoria",
+      "Melhorias dos agentes",
       "Rotinas",
       "Drive",
       "Calendário",
       "Tarefas",
       "Threads",
       "Equipe",
+      "Skills",
       "Wiki",
       "Painéis",
       "Gerenciador de tarefas",
@@ -138,14 +140,12 @@ describe("a personal workspace's sidebar", () => {
 
   test("a tool set to show when there's something comes into sight beside the inbox while something waits", async () => {
     const rows = () => [...nav().querySelectorAll(".sidebar__tools .sidebar__item-label")].map((l) => l.textContent);
-    await go({ ...personal(), sidebarItems: { proposals: "auto" } });
+    await go({ ...personal(), sidebarItems: { threads: "auto" } });
     expect(rows()).toEqual(["Caixa de entrada"]);
     cleanup();
-    const state = personal();
-    const first = state.proposals[0];
-    if (first) Object.assign(first, { status: "pending", canDecide: true });
-    await go({ ...state, sidebarItems: { proposals: "auto" } });
-    expect(rows()).toEqual(["Caixa de entrada", "Propostas de melhoria"]);
+    // A thread I follow has a reply I haven't read: Threads has something.
+    await go({ ...personal(), sidebarItems: { threads: "auto" }, unreadThreads: 1 });
+    expect(rows()).toEqual(["Caixa de entrada", "Threads"]);
   });
 
   test("the agents have no header; New agent sits right under them and opens the new agent's card (ADR 0164)", async () => {
@@ -429,7 +429,11 @@ describe("a personal workspace's sidebar", () => {
     await go(state, `dm/agent/${ADA_ID}`);
     expect(blocks()).toEqual(["tools", "agents", "channels"]);
     expect(channelRows()).toEqual([]);
-    await click(within(nav()).getByRole("button", { name: "Nova conversa em grupo" }));
+    // The header's + carries the same name; it opens a menu, the row the dialog.
+    const row = within(nav())
+      .getAllByRole("button", { name: "Nova conversa em grupo" })
+      .find((b) => b.classList.contains("sidebar__new-channel"));
+    await click(row as Element);
     expect(screen().getByRole("dialog", { name: "Nova conversa em grupo" })).toBeTruthy();
   });
 

@@ -134,6 +134,8 @@ export async function createTestServer(
      * addendum 2026-11-22), and most tests are about what comes after.
      */
     unconfirmedSignUps?: boolean;
+    /** The built web app to serve, as `WEB_DIR` does (`scripts/geometry/shifts.ts` opens it in Chrome). */
+    webDir?: string;
     /** Whether the process counts as overloaded (`watchLoad`); absent = never. */
     overloaded?: () => string | null;
   } = {},
@@ -261,6 +263,7 @@ export async function createTestServer(
       }),
     services,
     log,
+    webDir: options.webDir,
   });
   const live = createLiveSockets({
     db,
@@ -283,6 +286,8 @@ export async function createTestServer(
     streams: createStreamSockets({ db, auth, config, broker: engine.streams }),
     live,
     overloaded: options.overloaded,
+    // Read at each frame, so a test can spy on it.
+    onTyping: (where) => engine.warmWhileTyping(where),
   });
   return {
     db,
@@ -373,7 +378,7 @@ const CONFIRMED_SIGN_UPS = [
   "create trigger test_confirmed_sign_up before insert on users for each row execute function test_confirmed_sign_up()",
 ];
 
-export function browser(t: TestServer) {
+export function browser(t: TestServer, origin = ORIGIN) {
   let cookie = "";
   const request = async (
     path: string,
@@ -389,7 +394,7 @@ export function browser(t: TestServer) {
     // The tests' people read Portuguese, as before English became the default (a browser that says none reads English).
     if (!headers.has("accept-language")) headers.set("accept-language", "pt-BR");
     if (cookie) headers.set("cookie", cookie);
-    if (init.origin !== null) headers.set("origin", init.origin ?? ORIGIN);
+    if (init.origin !== null) headers.set("origin", init.origin ?? origin);
     if (init.json !== undefined) headers.set("content-type", "application/json");
     const res = await t.app.request(path, {
       method: init.method ?? (init.json !== undefined ? "POST" : "GET"),

@@ -294,6 +294,8 @@ export function notificationHref(
     return isSafeId(s.agentId) ? `/agent/${s.agentId}` : s.routineId ? routineHref(s.routineId) : null;
   if (n.kind === "join_request") return "/join-requests";
   if (n.kind === "proposal_waiting") return "/proposals";
+  // What agents applied today (ADR 0219): the history of their improvements, newest first, each with Undo there.
+  if (n.kind === "proposal_applied") return "/proposals";
   // Someone who joined: Membros, where they now are (the app has no "say hi" of its own for them).
   if (n.kind === "invitation_accepted") return "/me/members";
   // Who approves for whom (ADR 0139): Perfil › Aprovações, where it is set and declined.
@@ -317,7 +319,13 @@ export function notificationHref(
   if (n.kind === "widget_alert" || n.kind === "widget_failed") return widgetHref(s.widgetId, s.dashboardId);
   if (n.kind === "dashboard_proposal") return boardHref(s.dashboardId);
   // A computer's disk is almost full (ADR 0115): that computer, where its shared folder's size shows.
-  if (n.kind === "computer_disk_full" || n.kind === "computer_no_chrome")
+  // A computer that isn't answering, or is back (ADR 0241): that computer, where its agents can move elsewhere.
+  if (
+    n.kind === "computer_disk_full" ||
+    n.kind === "computer_no_chrome" ||
+    n.kind === "computer_down" ||
+    n.kind === "computer_back"
+  )
     return isSafeId(s.machineId) ? `/settings/devices/${s.machineId}` : null;
   // An agent's browser handoff (ADR 0040): its conversation, with the request's card in control.
   if (n.kind === "browser_handoff" && isSafeId(s.handoffId)) {

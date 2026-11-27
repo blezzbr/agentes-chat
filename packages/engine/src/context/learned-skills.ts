@@ -8,6 +8,7 @@ import type { Judge } from "../judge";
 import { notifySkillUpdate } from "../notification-producers";
 import { requirePermission } from "../organizations";
 import { enqueue } from "../outbox";
+import { queueSkillDescribe } from "../skill-library";
 import { restoreSkillSnapshot, type SkillSnapshot } from "../skill-updates";
 import {
   agentSkillByName,
@@ -39,7 +40,7 @@ import {
   mergeEvidence,
 } from "./items";
 import { overlap } from "./judgments";
-import { proposeSkillChange } from "./proposals";
+import { askedWords, proposeSkillChange } from "./proposals";
 import { type ContextDeps, judgeOf, resolveSummaryModel } from "./summaries";
 
 const { skills, agentSkills, contextItems, contextUsage, outcomes, agentRuns, agentActions, routines, channels } =
@@ -141,8 +142,9 @@ async function readsInRun(ctx: RunCtx & { db: Database }, name: string) {
  * `load_skill`. Credentials and permission rules never go in.
  * Applied at once as a new version, with a `skill.updated` receipt (Desfazer): its own agent-made, unlocked skill,
  * and a skill a person made while "Agentes melhoram as skills sozinhos" is on for it (`agentsImproveSkill`), its
- * author told. Otherwise each part becomes a proposal a person who manages agents accepts. A file that runs (a
- * script, an executable: `runsCode`) is always a proposal, whatever the setting.
+ * author told. Otherwise each part becomes a proposal the review weighs and applies (ADR 0219). A file that runs (a
+ * script, an executable: `runsCode`) is always a proposal, whatever the setting. A person's word on the skill stands:
+ * locked, or with that setting off, agents don't change it at all.
  * `trust` is the run's (`learnTrust`): after outside content (the web, mail, a connected app) nothing applies at
  * once, since skills load as trusted instructions and can be shared with other agents. `asked`: who is behind the run
  * and, with `decides`, that they asked in their own words and may decide it (`ownWords`, ADR 0092 §5): it applies at
@@ -166,6 +168,16 @@ export async function changeSkillAsAgent(
     throw new ValidationError("Give the skill's new body or the files to change.");
   for (const t of [text ?? "", ...edits.map((e) => e.content)])
     if (looksLikeSecret(t)) throw new ValidationError("This looks like a credential, so it can't go in a skill.");
+  if (!asked?.person) {
+    const [self] = await ctx.db
+      .select({ learns: schema.agents.learnsSkills })
+      .from(schema.agents)
+      .where(and(eq(schema.agents.id, ctx.agentId), eq(schema.agents.orgId, ctx.orgId)));
+    if (self && !self.learns)
+      throw new ForbiddenError(
+        "A person set you not to change skills on your own: say what you'd change, and change it only when someone asks.",
+      );
+  }
   const reads = await readsInRun(ctx, name);
   if (!reads.loaded) throw new ValidationError(`Load the skill ${name} with load_skill first, then change it.`);
   const mine = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, name, ctx.runId);
@@ -215,18 +227,17 @@ export async function changeSkillAsAgent(
     return { action: "unchanged", proposalIds: [], scripts: [] };
   await assertSkillChangeRoom(ctx.db, ctx, skill.id);
 
-  const why =
-    trust === "low"
-      ? "outside"
-      : own || decides
-        ? undefined
-        : managed
-          ? "person"
-          : skill.locked
-            ? "locked"
-            : (await agentsImproveSkill(ctx.db, skill))
-              ? undefined
-              : "person";
+  // A person's own word on the skill stands (ADR 0219): locked, or "Agentes melhoram as skills sozinhos" off, agents
+  // don't change it, so nothing goes to the review either.
+  if (!own && !decides && !managed) {
+    if (skill.locked)
+      throw new ForbiddenError("A person locked this skill, so agents don't change it: tell them what to change.");
+    if (!(await agentsImproveSkill(ctx.db, skill)))
+      throw new ForbiddenError(
+        "Agents don't change this skill on their own (a person turned that off for it): tell them what to change.",
+      );
+  }
+  const why = trust === "low" ? "outside" : own || decides ? undefined : managed ? "person" : undefined;
   // A proposal shows the skill's text to who reviews it: a personal skill's is its person's alone.
   if (skill.ownerUserId && (why || scripts.length > 0))
     throw new ValidationError(
@@ -236,7 +247,16 @@ export async function changeSkillAsAgent(
   const propose = async (body: string, file?: { path: string; text: string }) => {
     const p = await proposeSkillChange(
       { db: ctx.db, pubsub: deps.pubsub },
-      { orgId: ctx.orgId, agentId: ctx.agentId, skill, body, file, requesterId: asked?.person },
+      {
+        orgId: ctx.orgId,
+        agentId: ctx.agentId,
+        skill,
+        body,
+        file,
+        requesterId: asked?.person,
+        origin: why === "outside" ? "outside" : decides ? "asked" : asked?.person ? "asked_other" : "agent",
+        words: await askedWords(ctx.db, ctx, asked?.person),
+      },
     );
     if (p) proposalIds.push(p.id);
   };
@@ -372,6 +392,7 @@ export async function createSkillAsAgent(
       .returning();
     if (!skill) throw new Error("skill insert returned nothing");
     await db.insert(agentSkills).values({ orgId: ctx.orgId, agentId: ctx.agentId, skillId: skill.id, enabled: true });
+    await queueSkillDescribe(db, ctx.orgId, skill.id);
     await recordAgentActions(db, ctx, [
       {
         kind: "skill.created",
@@ -475,6 +496,16 @@ export async function promoteHowTos(deps: ContextDeps, orgId: string, skillAfter
         sql`${contextItems.agentId} is not null`,
       ),
     );
+  // An agent a person set not to learn on its own ("Learns on its own" off) keeps its how-tos as they are.
+  const still = new Set(
+    (
+      await db
+        .select({ id: schema.agents.id })
+        .from(schema.agents)
+        .where(and(eq(schema.agents.orgId, orgId), eq(schema.agents.learnsSkills, false)))
+    ).map((a) => a.id),
+  );
+  if (still.size > 0) notes.splice(0, notes.length, ...notes.filter((n) => !n.agentId || !still.has(n.agentId)));
   if (notes.length === 0) return 0;
   const ids = sql.join(
     notes.map((n) => sql`${n.id}::uuid`),
@@ -619,6 +650,7 @@ async function promoteCluster(deps: ContextDeps, orgId: string, agentId: string,
       .returning();
     if (!skill) throw new Error("skill insert returned nothing");
     await tx.insert(agentSkills).values({ orgId, agentId, skillId: skill.id, enabled: true });
+    await queueSkillDescribe(tx, orgId, skill.id);
     await tx
       .update(contextItems)
       .set({ status: "archived", updatedAt: new Date() })

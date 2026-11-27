@@ -1174,9 +1174,53 @@ html:not([data-pointer]) .code-tabs :is(.code-tabs__tab, .code-tabs__open, .code
 .code-sstage .brw-ac__stage {
   background: none;
 }
-/* The line under the screen reads over the sky: the page's second ink, not its quiet one. */
-.code-sstage .dsk-line .muted {
-  color: var(--ink2);
+/*
+ * A cover keeps the screen's own shape and place (1280×900, as large as the stage allows), so the screen opens exactly
+ * where its cover was: in the dialog a cover takes the whole stage, which here is a tall panel, not a window cut to the
+ * screen. The box, the cover and a question over the live screen share the one cell, under the bar: the foot's height
+ * (one line, or more in a narrow panel) never moves the screen.
+ */
+.code-sstage .cmp-body > .cmp-stage > *,
+.code-sstage .cmp-body > .dsk > .dsk-stage > * {
+  grid-area: 1 / 1;
+}
+.code-sstage .cmp-body > .cmp-stage,
+.code-sstage .cmp-body > .dsk > .dsk-stage {
+  place-items: start center;
+}
+.code-sstage .cmp-body > .cmp-stage > .cmp-stage__box,
+.code-sstage .cmp-body > .dsk:not([data-state="live"]) .dsk-screen,
+.code-sstage .cmp-body > .cmp-stage > .brw-dim,
+.code-sstage .cmp-body > .dsk > .dsk-stage > .brw-dim {
+  position: relative;
+  inset: auto;
+  place-self: start center;
+  box-sizing: border-box;
+  width: min(100cqw, 100cqh * 1280 / 900);
+  aspect-ratio: 1280 / 900;
+}
+/*
+ * Under the screen, what programs there can see is an ⓘ at the panel's bottom right (`notice: "hint"`): the panel has no
+ * room for a sentence, and words never sit on the sky's pixels. The agent's steps and the keys' line in control are the
+ * panel's foot, on the panel's own ground from side to side, reaching through the body's 20 px.
+ */
+.code-sstage .cmp-body .dsk-line--hint {
+  justify-content: flex-end;
+  align-items: center;
+}
+.code-sstage:not(.is-full) .cmp-body .dsk-line:not(.dsk-line--hint),
+.code-sstage:not(.is-full) .cmp-body:has(> .dsk) > .cmp-steps-row:has(> .cmp-steps) {
+  margin: 12px -20px -20px;
+  padding: 9px 16px;
+  height: auto;
+  min-height: 0;
+  background: var(--pane);
+  box-shadow: 0 -1px 0 var(--line);
+  font-size: 12.5px;
+  line-height: 18px;
+}
+.code-sstage .cmp-body:has(> .dsk) > .cmp-steps-row > .cmp-steps {
+  margin-top: 0;
 }
 .code-sstage--phone {
   align-items: center;

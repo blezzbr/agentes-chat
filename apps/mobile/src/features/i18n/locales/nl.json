@@ -4,22 +4,12 @@
     "send": "Versturen"
   },
   "categories": {
-    "title": "Categorieën",
     "where": "Waar #{{channel}} staat",
     "whereHelp": "Verandert voor iedereen. Wie er in het kanaal meedoet, blijft hetzelfde.",
-    "create": "Aanmaken",
-    "endOfList": "Komt voor iedereen onderaan de lijst.",
-    "channelCount_one": "{{count}} kanaal",
-    "channelCount_other": "{{count}} kanalen",
-    "none": "Nog geen categorieën.",
-    "manageHint": "Volgorde, namen en verwijderen",
-    "deleteTitle": "{{name}} verwijderen?",
     "order": "Plek in de lijst",
     "up": "Omhoog",
     "down": "Omlaag",
-    "position": "{{at}} van {{count}}.",
-    "channelPosition": "{{at}} van {{count}}.",
-    "itsChannels": "Kanalen"
+    "channelPosition": "{{at}} van {{count}}."
   },
   "blocks": {
     "send": "Versturen",
@@ -847,6 +837,7 @@
   },
   "agent": {
     "talk": "Gesprek",
+    "responsible": "Verantwoordelijke",
     "task": "Taak",
     "owner": "eigenaar: {{name}}",
     "cantTalk": "Deze agent werkt niet met jou.",
@@ -890,6 +881,12 @@
     "kind": {
       "proposal_waiting_one": "{{names}} stelt een verbetering voor",
       "proposal_waiting_other": "{{names}} stellen verbeteringen voor",
+      "proposal_applied_one": "{{names}} heeft een verbetering toegepast",
+      "proposal_applied_other": "{{names}} heeft {{count}} verbeteringen toegepast",
+      "proposal_applied_agents_one": "{{names}} hebben een verbetering toegepast",
+      "proposal_applied_agents_other": "{{names}} hebben {{count}} verbeteringen toegepast",
+      "proposal_applied_auto_one": "Er is automatisch een verbetering toegepast",
+      "proposal_applied_auto_other": "Er zijn automatisch {{count}} verbeteringen toegepast",
       "mention_one": "{{names}} heeft je vermeld",
       "mention_other": "{{names}} hebben je vermeld",
       "thread_reply_one": "{{names}} heeft in de thread geantwoord",
@@ -989,6 +986,10 @@
       "computer_disk_full_other": "Schijven van computers zijn bijna vol",
       "computer_no_chrome_one": "Een computer heeft Google Chrome nodig. Download het op google.com/chrome",
       "computer_no_chrome_other": "Computers hebben Google Chrome nodig. Download het op google.com/chrome",
+      "computer_down_one": "Een computer reageert niet",
+      "computer_down_other": "Een computer reageert niet",
+      "computer_back_one": "Een computer is terug",
+      "computer_back_other": "Een computer is terug",
       "app_created_one": "Een AI-app heeft dingen voor je aangemaakt",
       "app_created_other": "AI-apps hebben dingen voor je aangemaakt"
     },
@@ -1129,8 +1130,6 @@
     "issues": "Taken",
     "issuesWithMe_one": "{{count}} bij jou",
     "issuesWithMe_other": "{{count}} bij jou",
-    "proposalsWaiting_one": "{{count}} wacht",
-    "proposalsWaiting_other": "{{count}} wachten",
     "drive": "Drive",
     "connectors": "Connectors en MCP's",
     "preferences": "Voorkeuren",
@@ -1432,13 +1431,26 @@
     "uses_one": "{{count}} keer gebruikt",
     "uses_other": "{{count}} keer gebruikt",
     "confirmed": "Bevestigd door een persoon",
-    "confirm": "Bevestigen",
-    "confirmedToast": "Bevestigd",
     "details": "Technische details",
     "before": "Eerder stond er: {{text}}",
     "fix": "Corrigeren",
     "forgetTitle": "Deze herinnering vergeten?",
     "forgetText": "{{name}} gebruikt dit niet meer in toekomstige gesprekken."
+  },
+  "proposals": {
+    "title": "Verbeteringen van agents",
+    "emptyTitle": "Nog niets veranderd",
+    "empty": "Als een agent zijn instructies of die van een collega verbetert, verschijnt de wijziging hier, met Ongedaan maken.",
+    "more": "Meer tonen",
+    "reviewing": "Wordt beoordeeld…",
+    "appliedBy": "Toegepast door {{name}}",
+    "appliedBy_female": "Toegepast door {{name}}",
+    "appliedAuto": "Automatisch toegepast",
+    "leftOutBy": "Niet toegepast door {{name}}",
+    "leftOutBy_female": "Niet toegepast door {{name}}",
+    "leftOut": "Niet toegepast",
+    "undoneBy": "Door {{name}} ongedaan gemaakt",
+    "undoneByYou": "Door jou ongedaan gemaakt"
   },
   "wiki": {
     "map": "Paginakaart",
@@ -1493,6 +1505,15 @@
     "next": {
       "pr": "Branch gepusht, nog geen pull request",
       "mergeLocal": "Klaar om in {{base}} te mergen"
+    },
+    "terminal": {
+      "keys": "Terminaltoetsen",
+      "keyboard": "Toetsenbord",
+      "pasteHint": "Plak wat je hebt gekopieerd in de terminal",
+      "key": {
+        "CtrlC": "Control-C, onderbreken",
+        "CtrlD": "Control-D, einde van invoer"
+      }
     }
   },
   "taskManager": {
@@ -2075,6 +2096,7 @@
       "tool_request": "{{names}} vraagt je {{tool}} aan te zetten op je {{device}}",
       "cli_request": "{{names}} vraagt je {{tool}} te installeren op je {{device}}",
       "folder_request": "{{names}} vraagt je om de map {{path}} op je {{device}}",
+      "internet_shared": "Agents openen websites nu via het internet van {{device}}",
       "allowOnce": "Eén keer toestaan",
       "always": "{{name}} altijd toestaan",
       "no": "Nee",
@@ -2785,11 +2807,12 @@
     },
     "formatAuto": "{{name}} kiest de beste",
     "newWidget": {
-      "alerts": "Melding aan",
       "realData": "Echte gegevens",
       "editAsk": "Vraag wijzigen",
       "asked": "“{{ask}}”",
-      "autoFormat": "Automatische vorm"
+      "testReal": "Testen met echte gegevens",
+      "addHome": "Toevoegen aan Start",
+      "addTo": "Toevoegen aan {{where}}"
     },
     "agentPick": {
       "search": "Agents zoeken",
@@ -3231,7 +3254,8 @@
       "workspaceSub": "API-sleutel van de workspace",
       "key": "API-sleutel",
       "keyDefault": "standaard van de workspace",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} gebruikt het dan niet meer."
     },
     "missionAi": "AI",
     "missionLocked": "Wie het werk doet kies je vóór Start. Het model kan altijd veranderen."

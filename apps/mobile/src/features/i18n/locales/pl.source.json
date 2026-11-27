@@ -5,35 +5,11 @@
   "app.send": {
     "value": "Send"
   },
-  "categories.title": {
-    "value": "Categories"
-  },
   "categories.where": {
     "value": "Where #{{channel}} shows"
   },
   "categories.whereHelp": {
     "value": "Changes for everyone. Who takes part in the channel stays the same."
-  },
-  "categories.create": {
-    "value": "Create"
-  },
-  "categories.endOfList": {
-    "value": "Goes to the end of the list for everyone."
-  },
-  "categories.channelCount": {
-    "value": {
-      "one": "{{count}} channel",
-      "other": "{{count}} channels"
-    }
-  },
-  "categories.none": {
-    "value": "No categories yet."
-  },
-  "categories.manageHint": {
-    "value": "Order, names and delete"
-  },
-  "categories.deleteTitle": {
-    "value": "Delete {{name}}?"
   },
   "categories.order": {
     "value": "Place in the list"
@@ -44,14 +20,8 @@
   "categories.down": {
     "value": "Move down"
   },
-  "categories.position": {
-    "value": "{{at}} of {{count}}."
-  },
   "categories.channelPosition": {
     "value": "{{at}} of {{count}}."
-  },
-  "categories.itsChannels": {
-    "value": "Channels"
   },
   "blocks.send": {
     "value": "Send"
@@ -2017,6 +1987,9 @@
   "agent.talk": {
     "value": "Chat"
   },
+  "agent.responsible": {
+    "value": "Owner"
+  },
   "agent.task": {
     "value": "Task"
   },
@@ -2118,6 +2091,24 @@
     "value": {
       "one": "{{names}} proposes an improvement",
       "other": "{{names}} propose improvements"
+    }
+  },
+  "activity.kind.proposal_applied": {
+    "value": {
+      "one": "{{names}} applied an improvement",
+      "other": "{{names}} applied {{count}} improvements"
+    }
+  },
+  "activity.kind.proposal_applied_agents": {
+    "value": {
+      "one": "{{names}} applied an improvement",
+      "other": "{{names}} applied {{count}} improvements"
+    }
+  },
+  "activity.kind.proposal_applied_auto": {
+    "value": {
+      "one": "An improvement was applied automatically",
+      "other": "{{count}} improvements were applied automatically"
     }
   },
   "activity.kind.mention": {
@@ -2411,6 +2402,18 @@
     "value": {
       "one": "A computer needs Google Chrome. Get it at google.com/chrome",
       "other": "Computers need Google Chrome. Get it at google.com/chrome"
+    }
+  },
+  "activity.kind.computer_down": {
+    "value": {
+      "one": "A computer isn't answering",
+      "other": "A computer isn't answering"
+    }
+  },
+  "activity.kind.computer_back": {
+    "value": {
+      "one": "A computer is back",
+      "other": "A computer is back"
     }
   },
   "activity.kind.app_created": {
@@ -2768,12 +2771,6 @@
     "value": {
       "one": "{{count}} with you",
       "other": "{{count}} with you"
-    }
-  },
-  "me.proposalsWaiting": {
-    "value": {
-      "one": "{{count}} waiting",
-      "other": "{{count}} waiting"
     }
   },
   "me.drive": {
@@ -3547,12 +3544,6 @@
   "memory.confirmed": {
     "value": "Confirmed by a person"
   },
-  "memory.confirm": {
-    "value": "Confirm"
-  },
-  "memory.confirmedToast": {
-    "value": "Confirmed"
-  },
   "memory.details": {
     "value": "Technical details"
   },
@@ -3567,6 +3558,41 @@
   },
   "memory.forgetText": {
     "value": "{{name}} stops using this in future conversations."
+  },
+  "proposals.title": {
+    "value": "Agent improvements"
+  },
+  "proposals.emptyTitle": {
+    "value": "Nothing changed yet"
+  },
+  "proposals.empty": {
+    "value": "When an agent improves its instructions or a teammate's, the change shows here, with Undo."
+  },
+  "proposals.more": {
+    "value": "Show more"
+  },
+  "proposals.reviewing": {
+    "value": "Reviewing…"
+  },
+  "proposals.appliedBy": {
+    "value": "Applied by {{name}}",
+    "female": "Applied by {{name}}"
+  },
+  "proposals.appliedAuto": {
+    "value": "Applied automatically"
+  },
+  "proposals.leftOutBy": {
+    "value": "Left out by {{name}}",
+    "female": "Left out by {{name}}"
+  },
+  "proposals.leftOut": {
+    "value": "Left out"
+  },
+  "proposals.undoneBy": {
+    "value": "Undone by {{name}}"
+  },
+  "proposals.undoneByYou": {
+    "value": "Undone by you"
   },
   "wiki.map": {
     "value": "Page map"
@@ -3702,6 +3728,21 @@
   },
   "coding.next.mergeLocal": {
     "value": "Ready to merge into {{base}}"
+  },
+  "coding.terminal.keys": {
+    "value": "Terminal keys"
+  },
+  "coding.terminal.keyboard": {
+    "value": "Keyboard"
+  },
+  "coding.terminal.pasteHint": {
+    "value": "Paste what you copied into the terminal"
+  },
+  "coding.terminal.key.CtrlC": {
+    "value": "Control-C, interrupt"
+  },
+  "coding.terminal.key.CtrlD": {
+    "value": "Control-D, end of input"
   },
   "taskManager.loadFailed": {
     "value": "Couldn't load the tasks."
@@ -5121,6 +5162,9 @@
   },
   "devices.notice.folder_request": {
     "value": "{{names}} asks for the folder {{path}} on your {{device}}"
+  },
+  "devices.notice.internet_shared": {
+    "value": "Agents now open websites through the internet of {{device}}"
   },
   "devices.notice.allowOnce": {
     "value": "Allow once"
@@ -6836,9 +6880,6 @@
   "dashboards.formatAuto": {
     "value": "{{name}} picks the best one"
   },
-  "dashboards.newWidget.alerts": {
-    "value": "Alerts"
-  },
   "dashboards.newWidget.realData": {
     "value": "Real data"
   },
@@ -6848,8 +6889,14 @@
   "dashboards.newWidget.asked": {
     "value": "“{{ask}}”"
   },
-  "dashboards.newWidget.autoFormat": {
-    "value": "Auto format"
+  "dashboards.newWidget.testReal": {
+    "value": "Test with real data"
+  },
+  "dashboards.newWidget.addHome": {
+    "value": "Add to Home"
+  },
+  "dashboards.newWidget.addTo": {
+    "value": "Add to {{where}}"
   },
   "dashboards.agentPick.search": {
     "value": "Search agents"
@@ -7858,6 +7905,9 @@
   },
   "aiHub.choice.api": {
     "value": "API"
+  },
+  "aiHub.choice.asksMove": {
+    "value": "{{agent}} stops using it."
   },
   "aiHub.missionAi": {
     "value": "AI"

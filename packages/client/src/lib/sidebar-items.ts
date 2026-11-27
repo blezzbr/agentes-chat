@@ -11,6 +11,7 @@ export const SIDEBAR_ITEMS: readonly SidebarItem[] = [
   "routines",
   "calendar",
   "team",
+  "skills",
   "dashboards",
   "code",
   "taskManager",
@@ -29,6 +30,7 @@ export const SIDEBAR_DEFAULTS: Record<SidebarItem, SidebarPlace> = {
   routines: "more",
   calendar: "more",
   team: "always",
+  skills: "more",
   dashboards: "more",
   taskManager: "more",
   // Code sessions (ADR 0215): in More, and only where it has anything (`offersCode`).
@@ -52,6 +54,7 @@ export const PERSONAL_SIDEBAR_DEFAULTS: Record<SidebarItem, SidebarPlace> = {
   routines: "more",
   calendar: "more",
   team: "more",
+  skills: "more",
   dashboards: "more",
   taskManager: "more",
   // Code sessions (ADR 0215): in More, and only where it has anything (`offersCode`).
@@ -74,6 +77,7 @@ export const PERSONAL_SIDEBAR_ITEMS: readonly SidebarItem[] = [
   "issues",
   "threads",
   "team",
+  "skills",
   "wiki",
   "dashboards",
   "code",
@@ -95,7 +99,7 @@ export const offeredTools = (order: readonly SidebarItem[], code: boolean | unde
   offersCode(code, saved) ? [...order] : order.filter((id) => id !== "code");
 
 /** The tools with a count in the sidebar: only these can wait in More until there is something (`auto`). */
-export const SIDEBAR_COUNTED: readonly SidebarItem[] = ["waiting", "proposals", "threads"];
+export const SIDEBAR_COUNTED: readonly SidebarItem[] = ["waiting", "threads"];
 
 /** The sidebar's sections in their default order (mirrors `SIDEBAR_SECTIONS`, packages/engine/src/sidebar-items.ts). */
 export const SIDEBAR_SECTIONS: readonly SidebarSection[] = ["tools", "channels", "agents", "people"];

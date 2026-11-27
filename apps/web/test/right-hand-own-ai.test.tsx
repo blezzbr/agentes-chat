@@ -104,7 +104,7 @@ test("Lodi's old settings address opens Lodi's page: three groups, the face open
   expect(dialog.textContent).toContain("Vale para quem não tem plano próprio.");
 });
 
-test("a member's Lodi page has nothing of the workspace's: Sua IA is one row that opens, and connects their plan from its dialog", async () => {
+test("a member's Lodi page has nothing of the workspace's: Sua IA is one row that opens, and adds their plan from its account list", async () => {
   const state = withRightHand(seedState());
   const me = state.me?.organizations[0];
   if (me) me.role = "member";
@@ -130,7 +130,9 @@ test("a member's Lodi page has nothing of the workspace's: Sua IA is one row tha
   const dialog = screen().getByRole("dialog", { name: "Quem pensa pelo Lodi para você" });
   // Who it is for: the footer's line.
   expect(dialog.textContent).toContain("Vale só para a sua conversa com o Lodi.");
-  await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Conectar meu plano" })));
+  // "Adicionar conta" at the account list's foot: Connect, over which this dialog closes.
+  await openSelect(within(dialog).getByRole("combobox", { name: "Conta" }));
+  await act(async () => fireEvent.click(screen().getByRole("button", { name: /^Adicionar conta/ })));
   await settle(6);
   expect(screen().queryByRole("dialog", { name: "Quem pensa pelo Lodi para você" })).toBeNull();
   expect(screen().getByRole("dialog", { name: /Lodi/ })).toBeTruthy();
@@ -198,9 +200,12 @@ test("Sua IA is the one picker: A do workspace first, then the plans; picking it
   const account = within(dialog).getByRole("combobox", { name: "Conta" });
   expect(account.querySelector(".aa-opt__name")?.textContent).toBe("Trabalho");
   const options = await openSelect(account);
-  expect(options.map((o) => o.querySelector(".aa-opt__name")?.textContent)).toEqual(["A do workspace", "Trabalho"]);
+  expect(options.map((o) => o.querySelector(".aa-row > span:first-child")?.textContent)).toEqual([
+    "A do workspace",
+    "Trabalho",
+  ]);
   // Lodi's own AI takes no key of the workspace's: "A do workspace" is it.
-  expect(screen().queryByRole("group", { name: "Do workspace" })).toBeNull();
+  expect(screen().queryByRole("group", { name: "Chaves de API" })).toBeNull();
   await act(async () => fireEvent.click(options[0] as HTMLElement));
   await settle(8);
   expect(sent).toEqual([{ scope: "mine", brain: "model" }]);
@@ -275,28 +280,36 @@ test("Poderes do workspace is one row for everyone that opens what only Lodi doe
   ]);
 });
 
-test("Lodi's page has three tabs: its settings, what it may use on the agent page's own access tab, and what it keeps for the viewer", async () => {
+test("Lodi's page has four tabs: its settings, what it may use on the agent page's own access tab, its skills, and what it keeps for the viewer", async () => {
   const state = withRightHand(seedState());
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api: createFakeApi(state) });
   await settle(8);
   const tabs = () => within(screen().getByRole("tablist", { name: "Seções do Lodi" })).getAllByRole("tab");
-  expect(tabs().map((tab) => tab.textContent)).toEqual(["Configurações", "Ferramentas e acesso", "Memória"]);
+  expect(tabs().map((tab) => tab.textContent)).toEqual(["Configurações", "Ferramentas e acesso", "Skills", "Memória"]);
   expect(tabs()[0]?.getAttribute("aria-selected")).toBe("true");
   expect(row(/^Poderes do workspace/)).toBeTruthy();
   cleanup();
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}?tab=access`, { api: createFakeApi(state) });
   await settle(8);
   expect(tabs()[1]?.getAttribute("aria-selected")).toBe("true");
-  // The same cards as any agent's: its apps, mailboxes and skills. Its settings are the other tab.
-  for (const id of ["ac-connectors", "ac-builtin", "ac-skills"]) expect(document.getElementById(id)).toBeTruthy();
+  // The same cards as any agent's: its apps and mailboxes. Its settings are the other tab.
+  for (const id of ["ac-connectors", "ac-builtin"]) expect(document.getElementById(id)).toBeTruthy();
+  expect(document.getElementById("ac-skills")).toBeNull();
   expect(screen().queryByRole("button", { name: /^Poderes do workspace/ })).toBeNull();
   // No sky, tabs of an agent's own work or archive: it is part of the workspace.
   expect(document.querySelector(".agp-hero")).toBeNull();
   cleanup();
+  // Its skills on the agent page's own Skills tab; their level is with the other areas in Tools and access.
+  await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}?tab=skills`, { api: createFakeApi(state) });
+  await settle(8);
+  expect(tabs()[2]?.getAttribute("aria-selected")).toBe("true");
+  expect(document.getElementById("ac-skills")).toBeTruthy();
+  expect(screen().queryByRole("radiogroup", { name: "Nível em Skills" })).toBeNull();
+  cleanup();
   // What it keeps for the viewer, and the rules they gave it, on the agent page's own memory tab.
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}?tab=memory`, { api: createFakeApi(state) });
   await settle(8);
-  expect(tabs()[2]?.getAttribute("aria-selected")).toBe("true");
+  expect(tabs()[3]?.getAttribute("aria-selected")).toBe("true");
   expect(document.getElementById("mem-known")).toBeTruthy();
 });
 
