@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/agentes-chat/agentes-chat",
+  "version": "0.1.17",
+  "revision": "42e83764355812f52b797d14641a2e3f3c482120",
+  "backports": [
+    {
+      "source": "https://github.com/agentes-chat/agentes-chat/pull/1535",
+      "revision": "ab5ef12104ed2e826e6534a4098011f835b10ad0",
+      "description": "Official integration of #1132 for Antigravity CLI 1.5.x tool calls in Lodi"
+    },
+    {
+      "source": "https://github.com/agentes-chat/agentes-chat/pull/1517",
+      "revision": "cbeab90af80dc143475f129a52db02eb2fcd71f7",
+      "description": "Allow an administrator to connect a plan for an agent they manage"
+    }
+  ]
+}

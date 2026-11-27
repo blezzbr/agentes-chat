@@ -1,42 +1,48 @@
-# Blezz builds
+# Blezz Workspace releases
 
-The `blezz` branch starts at an official server release. Keep each product patch in
-its own commit. For the next upstream release, fetch its tag, start a candidate
-from that tag, and replay the deployment files and any patches still needed.
-Retire a local patch after its fix ships upstream. Keep the remote `main` branch
-available for upstream synchronization.
+Blezz Workspace is a server build of the agentes.chat fork, built with the
+upstream Dockerfile. Based on agentes.chat by AGENTESCHAT, LLC. The corresponding
+source, including the build scripts, is in this repository under the AGPL-3.0-only
+license and the terms in NOTICE.
+
+## Track upstream
+
+The `blezz` branch is the release branch. Fetch the exact upstream stable tag
+and merge it when adopting that version. Update `upstream.json` with the server
+version, upstream commit and backports that remain in the build. If upstream
+ships a backport, review the merge and remove its entry. Intermediate versions
+can be skipped for deployment. Read their official release notes and check the
+migration path from the version actually installed.
 
 ## Validate and publish
 
-Open a pull request against `blezz` to run the Blezz Compose and runner checks.
-To publish the reviewed commit, push the specific tag
-`blezz-v<upstream-version>.<revision>`, for example `blezz-v0.1.13.1`. The
-workflow builds and tests Linux amd64, publishes the tested image to
-`ghcr.io/blezzbr/agentes-chat`, and attaches a deployment bundle to a GitHub
-Release. The bundle contains the matching Compose, image digests, runner and
-checksums. Never move a published tag.
+Pull requests to `blezz` run checks for affected areas and changed test files.
+Changes limited to documentation do not trigger the workflow. The release
+workflow runs explicitly when a tag of the form `blezz-vMAJOR.MINOR.PATCH` is
+pushed. A manual run on `blezz` builds and tests both architectures without
+publishing. Both workflows use standard GitHub-hosted runners.
 
-## Staging
+The Blezz tag is independent of the upstream version. The release notes, the
+delivery bundle's `upstream.json` and the image labels carry the source revision
+and upstream base. Each release publishes the verified Linux amd64 and arm64
+images under one versioned Docker Hub tag and pins the index by digest in the
+delivery bundle. The bundle also includes the matching Compose and runner.
 
-On the Linux amd64 host, unpack the approved release bundle in its own directory,
-check `SHA256SUMS` and run `sudo bash stage.sh`. It brings up the selected digest
-on loopback port 3300 in the separate `blezz-agentes-staging` Compose project.
-To open it remotely, forward local port 3300 to host port 3300 via SSH. The
-database and files volumes are independent. Each fresh installation uses its
-own runtime secrets and an empty PostgreSQL database.
+Publishing needs a Docker Hub token with read/write access stored in the GitHub
+repository secret `DOCKERHUB_TOKEN`. Pulls from the public repository require no
+deployment credential. Keep tags immutable and use the release bundle's digest
+for deployment.
 
-CI rehearses migrations and a PostgreSQL dump and restore with synthetic data.
-For an end-to-end subscription or runner test, use a staging-only runner
-identity and a staging account. Production service state, provider sign-ins,
-tunnels and storage destinations must remain private. If the GHCR package is restricted, use the release's image archive:
-`sudo bash stage.sh /path/to/blezz-image-linux-amd64.tar.gz`. Staging verifies
-the archive's checksum and the loaded image ID against the release bundle.
+## Staging and promotion
 
-## Production promotion
+Download `blezz-delivery.tar.gz` from an approved release. Unpack it in a
+dedicated directory, check `SHA256SUMS` and run `sudo bash stage.sh` on the Linux
+amd64 staging host. It uses port 3300 on loopback and a distinct Compose project,
+database and files volume. Access it using SSH forwarding. Use synthetic data
+and staging-only accounts. System-mode runner verification needs an isolated
+host or VM because its network rules are host-wide.
 
-Use the exact tested release bundle and pinned image digests. Use the
-operations repository to verify the live deployment, back up PostgreSQL and
-files, rehearse restore and migration, and retain the accepted Compose and
-runner pairing. Plan rollback against the matching backup before applying a
-database migration. Production credentials and the promotion operation stay
-on the deployment host.
+Production promotion uses the exact tested artifacts. Verify the current
+deployment, back up PostgreSQL and files, rehearse restore and migration, and
+pair the runner with the release. Recovery after a database migration needs
+the matching verified backup and recovery plan.

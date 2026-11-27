@@ -1,131 +1,153 @@
 name: Blezz build and delivery
 
 on:
-  pull_request:
-    branches: [blezz]
   push:
     tags: ['blezz-v*']
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
-  # The backup implementation is independent of the app release and unchanged
-  # since the pinned version. The upstream v0.1.13 backup tag was not published.
+  DOCKERHUB_IMAGE: docker.io/klausgibin/blezz-workspace
   BACKUP_IMAGE: ghcr.io/agentes-chat/backup@sha256:e659b8a2b78fe464d90a9a27ffd4a3e6d72a637e3511b518f3079669a3eb821a
 
 concurrency:
-  group: blezz-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: blezz-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  validate:
+  build:
     if: github.repository == 'blezzbr/agentes-chat'
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    outputs:
-      version: ${{ steps.version.outputs.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - id: version
-        name: Verify release version
+      - name: Validate release and upstream metadata
+        id: metadata
         run: |
-          version=$(jq -er .version apps/server/package.json)
+          set -euo pipefail
+          version=$(jq -er .version ops/blezz/upstream.json)
+          revision=$(jq -er .revision ops/blezz/upstream.json)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && "$revision" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$(jq -er .version apps/server/package.json)" == "$version" ]]
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then
-            [[ "$GITHUB_REF_NAME" =~ ^blezz-v[0-9]+\.[0-9]+\.[0-9]+\.[1-9][0-9]*$ ]]
-            [[ "${GITHUB_REF_NAME%.*}" == "blezz-v$version" ]]
+            [[ "$GITHUB_REF_NAME" =~ ^blezz-v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          printf 'version=%s\nrevision=%s\n' "$version" "$revision" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
       - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
-          platforms: linux/amd64
+          platforms: linux/${{ matrix.arch }}
           load: true
           tags: agentes-blezz:test
           labels: |
+            org.opencontainers.image.title=Blezz Workspace
+            org.opencontainers.image.description=Blezz fork of agentes.chat
+            org.opencontainers.image.licenses=AGPL-3.0-only
             org.opencontainers.image.source=https://github.com/blezzbr/agentes-chat
             org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha,scope=blezz-amd64
-          cache-to: ${{ github.ref_type == 'tag' && 'type=gha,scope=blezz-amd64,mode=max' || '' }}
-      - name: Test runner integration
+            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.base.name=ghcr.io/agentes-chat/agentes:${{ steps.metadata.outputs.version }}
+            br.blezz.upstream.revision=${{ steps.metadata.outputs.revision }}
+          cache-from: type=gha,scope=blezz-${{ matrix.arch }}
+          cache-to: type=gha,scope=blezz-${{ matrix.arch }},mode=max
+      - name: Test Antigravity login and runner integration
+        if: matrix.arch == 'amd64'
         run: |
-          docker run --rm --entrypoint bun agentes-blezz:test test \
-            apps/server/test/runner/brain-antigravity.test.ts
-      - name: Test Compose, migration, backup and restore
+          docker run --rm --entrypoint bun agentes-blezz:test test apps/server/test/runner/brain-antigravity.test.ts
+          docker run --rm --entrypoint bun agentes-blezz:test test packages/engine/test/machine-accounts.test.ts
+          docker run --rm --entrypoint bun agentes-blezz:test test packages/client/test/no-ai-lib.test.ts
+      - name: Test Compose, migrations and restored data
         env:
-          UPSTREAM_VERSION: ${{ steps.version.outputs.version }}
+          UPSTREAM_VERSION: ${{ steps.metadata.outputs.version }}
         run: ops/blezz/smoke.sh
-      - name: Export tested image for publication
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         if: github.ref_type == 'tag'
-        run: docker save agentes-blezz:test | gzip -1 > image.tar.gz
+        with:
+          username: klausgibin
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Push tested platform image
+        if: github.ref_type == 'tag'
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          image="$DOCKERHUB_IMAGE:$GITHUB_REF_NAME-$ARCH"
+          docker tag agentes-blezz:test "$image"
+          docker push "$image"
+          digest=$(docker buildx imagetools inspect "$image" | awk '$1 == "Digest:" && !seen++ {print $2}')
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          mkdir delivery
+          printf '%s@%s\n' "$DOCKERHUB_IMAGE" "$digest" > "delivery/$ARCH.digest"
+          if [[ "$ARCH" == amd64 ]]; then
+            cp docker-compose.yml ops/blezz/{stage.sh,upstream.json} delivery/
+            container=$(docker create agentes-blezz:test)
+            docker cp "$container:/app/apps/web/dist/runner/agentes-runner.mjs" delivery/agentes-runner.mjs
+            docker rm "$container"
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: github.ref_type == 'tag'
         with:
-          name: tested-image
-          path: image.tar.gz
+          name: delivery-${{ matrix.arch }}
+          path: delivery/
+          if-no-files-found: error
           retention-days: 1
 
   publish:
-    if: github.repository == 'blezzbr/agentes-chat' && github.event_name == 'push' && github.ref_type == 'tag'
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    if: github.repository == 'blezzbr/agentes-chat' && github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: write
-      packages: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      UPSTREAM_VERSION: ${{ needs.validate.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          name: tested-image
+          pattern: delivery-*
+          merge-multiple: true
+          path: delivery
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Publish tested image and delivery bundle
+          username: klausgibin
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Publish multi-architecture image and release bundle
         run: |
           set -euo pipefail
-          image="ghcr.io/blezzbr/agentes-chat:$GITHUB_REF_NAME"
-          digest() {
-            docker buildx imagetools inspect "$1" | awk '$1 == "Digest:" && !seen++ { print $2 }'
-          }
-
-          docker load -i image.tar.gz
-          docker tag agentes-blezz:test "$image"
-          docker push "$image"
-          image_digest=$(digest "$image")
-          [[ "$image_digest" =~ ^sha256:[a-f0-9]{64}$ ]]
-
-          image_id=$(docker image inspect --format '{{.Id}}' agentes-blezz:test)
-          archive_sha=$(sha256sum image.tar.gz | cut -d' ' -f1)
-
-          mkdir delivery
-          cp docker-compose.yml ops/blezz/stage.sh delivery/
-          container=$(docker create agentes-blezz:test)
-          docker cp "$container:/app/apps/web/dist/runner/agentes-runner.mjs" delivery/agentes-runner.mjs
-          docker rm "$container"
-          cat > delivery/images.env <<IMAGES
-          AGENTES_IMAGE=ghcr.io/blezzbr/agentes-chat@$image_digest
-          AGENTES_BACKUP_IMAGE=$BACKUP_IMAGE
-          UPSTREAM_VERSION=$UPSTREAM_VERSION
-          APP_IMAGE_ID=$image_id
-          APP_ARCHIVE_SHA256=$archive_sha
-          IMAGES
+          image="$DOCKERHUB_IMAGE:$GITHUB_REF_NAME"
+          docker buildx imagetools create -t "$image" "$(cat delivery/amd64.digest)" "$(cat delivery/arm64.digest)"
+          docker buildx imagetools inspect --raw "$image" | jq -e '
+            [.manifests[].platform | select(.os == "linux") | .architecture] | sort == ["amd64", "arm64"]
+          '
+          digest=$(docker buildx imagetools inspect "$image" | awk '$1 == "Digest:" && !seen++ {print $2}')
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          version=$(jq -er .version delivery/upstream.json)
+          revision=$(jq -er .revision delivery/upstream.json)
+          printf 'AGENTES_IMAGE=%s@%s\nAGENTES_BACKUP_IMAGE=%s\nUPSTREAM_VERSION=%s\n' \
+            "$DOCKERHUB_IMAGE" "$digest" "$BACKUP_IMAGE" "$version" > delivery/images.env
           (
             cd delivery
-            sha256sum docker-compose.yml stage.sh agentes-runner.mjs images.env > SHA256SUMS
+            sha256sum docker-compose.yml stage.sh agentes-runner.mjs images.env upstream.json amd64.digest arm64.digest > SHA256SUMS
           )
-          tar -czf blezz-linux-amd64.tar.gz -C delivery .
-          mv image.tar.gz blezz-image-linux-amd64.tar.gz
-          gh release create "$GITHUB_REF_NAME" blezz-linux-amd64.tar.gz blezz-image-linux-amd64.tar.gz \
-            --verify-tag --title "$GITHUB_REF_NAME" \
-            --notes "Blezz build based on upstream v$UPSTREAM_VERSION. Source commit: $GITHUB_SHA."
+          tar -czf blezz-delivery.tar.gz -C delivery .
+          {
+            printf 'Upstream [v%s](https://github.com/agentes-chat/agentes-chat/releases/tag/v%s), commit `%s`.\n\n' "$version" "$version" "$revision"
+            printf 'Image `%s@%s` for Linux amd64 and arm64.\n\n' "$DOCKERHUB_IMAGE" "$digest"
+            jq -r '.backports[] | "- " + .description + " (" + .source + ")"' delivery/upstream.json
+          } > release-notes.md
+          gh release create -R "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" blezz-delivery.tar.gz \
+            --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md
