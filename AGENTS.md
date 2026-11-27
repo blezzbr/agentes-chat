@@ -12,8 +12,8 @@ upstream. Infrastructure records and private operating details live in the separ
 
 - Run the [manual upstream sync workflow](.github/workflows/blezz-sync-upstream.yml) on `main`.
   Open the PR from the run summary if organization policy blocks automatic creation.
-  Resolve conflicts in the PR branch and use a merge commit. Build and publication
-  remain a separate tag operation. See the [sync runbook](ops/blezz/README.md).
+  Resolve conflicts in the PR branch and use a merge commit. Run the separate
+  release workflow after merging. See the [sync runbook](ops/blezz/README.md).
 
 - Base releases on an explicit upstream stable server tag. Read the upstream release notes for
   intermediate versions too when advancing several releases at once. Use that tag's Dockerfile
@@ -29,17 +29,16 @@ upstream. Infrastructure records and private operating details live in the separ
 
 ## Build and delivery
 
-- Use `blezz-v<upstream-version>-r<N>` tags. Run `python3 ops/blezz/release.py next-tag`
-  to get the next number. A new upstream base starts at `r1`; the same base increments
-  its latest published revision. Preserve historical and published tags. The server reports
-  the upstream application version.
-- Commit `ops/blezz/changes/<tag>.json` after reviewing the fork diff. List Blezz changes
-  since the prior release or use an empty changes array if the release only adopts upstream.
-  CI validates the tag, puts Blezz changes in their own section and includes the full official
-  notes for every published server version adopted since the prior base.
+- Run [Publicar imagem Blezz](.github/workflows/blezz-release.yml) on `main`.
+  The workflow determines the next `blezz-v<upstream-version>-r<N>` tag,
+  starting at `r1` on a new base and incrementing the published revision on the
+  same base. Preserve published tags. The server reports the upstream version.
+- Review the fork diff and enter Blezz changes in the workflow's optional notes field.
+  Leave the field empty when the release only adopts upstream. The release includes the
+  full official notes for every published server version adopted since the prior base.
 - Keep [CI](.github/workflows/blezz-ci.yml) selective by changed area. Documentation-only edits
-  should skip the builds. The explicit tag runs the [release workflow](.github/workflows/blezz-release.yml)
-  on standard cloud GitHub Actions runners for Linux amd64 and arm64.
+  should skip the builds. The manual release runs on standard cloud GitHub Actions runners
+  for Linux amd64 and arm64.
 - Publish tested images to `docker.io/klausgibin/blezz-agentes-chat` using the repository
   secret `DOCKERHUB_TOKEN`. Keep the public image associated with its corresponding source,
   attribution and AGPL license. Never print credentials, copy user data into the fork or image,

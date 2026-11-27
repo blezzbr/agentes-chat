@@ -40,32 +40,24 @@ migration path from the version actually installed.
 ## Validate and publish
 
 Pull requests to `main` run checks for affected areas and changed test files.
-Ordinary documentation edits skip the workflow. A manual run on `main`
-builds and tests both architectures without publishing. Both workflows use
-standard GitHub-hosted runners.
+Ordinary documentation edits skip the workflow. Both workflows use standard
+GitHub-hosted runners.
 
-Set the stable upstream base in `upstream.json`, then run:
+After merging, open **Actions → Publicar imagem Blezz → Run workflow** on
+`main`. Keep `operation=publish`. Enter Blezz changes since the previous
+release in `changes`, one per line. Leave it blank for an upstream-only
+update. The workflow calculates the tag from `upstream.json` and published
+releases, and builds, tests, and publishes from the selected commit.
 
-```sh
-python3 ops/blezz/release.py next-tag
-```
+Tags use `blezz-v<upstream-version>-r<N>`. A new base starts at `r1`.
+On the same base the workflow increments the highest published revision.
+The earlier `blezz-v1.0.0` tag remains valid and is the starting point for
+release note comparison.
 
-The result is `blezz-v<upstream-version>-r<N>`. A new base starts at `r1`. On
-the same base the script increments the highest published revision. For example,
-`blezz-v0.1.18-r2` becomes `blezz-v0.1.18-r3`, or `blezz-v0.1.19-r1` after a
-base update. The earlier `blezz-v1.0.0` tag remains valid and is the starting
-point for the release note comparison. For an unpublished release, keep the same
-tag and retry its workflow.
-
-Before pushing a release tag, commit
-`ops/blezz/changes/<tag>.json` with a `changes` array describing the Blezz
-changes since the preceding published release. Review the fork diff and include
-product or operations changes. Use `{"changes":[]}` when only the upstream base
-changed. Preview the notes before release:
-
-```sh
-python3 ops/blezz/release.py notes "$tag" --output /tmp/blezz-release-notes.md
-```
+Select `preview` to calculate the tag and download the notes without building.
+Select `validate` to test both architectures without publishing. Retry a failed
+publication from the same run to keep its source commit. Explicit tag pushes
+remain supported with a committed `ops/blezz/changes/<tag>.json` notes file.
 
 CI validates the calculated revision and generates two distinct sections.
 The first lists Blezz changes. The second copies the complete official server
