@@ -156,6 +156,7 @@ import type {
   JoinClaim,
   JoinRequest,
   LearnedSkill,
+  LocalSpeech,
   Machine,
   MachineAccess,
   MachineAccount,
@@ -637,6 +638,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       speechKey: () => nullOn(404, () => request<SpeechKey>("/api/app/speech-key")),
       saveSpeechKey: (input) => request<SpeechKey>("/api/app/speech-key", { method: "PUT", json: input }),
       removeSpeechKey: () => request<SpeechKey>("/api/app/speech-key", { method: "DELETE" }),
+      speechLocal: () => nullOn(404, () => request<LocalSpeech>("/api/app/speech-local")),
+      installSpeechLocal: () => request<LocalSpeech>("/api/app/speech-local", { method: "PUT", json: {} }),
+      removeSpeechLocal: () => request<LocalSpeech>("/api/app/speech-local", { method: "DELETE" }),
     },
     account: {
       authConfig: () => request<AuthConfig>("/api/app/auth-config"),
@@ -1348,6 +1352,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       forgetPhone: (orgId, phoneId) =>
         request<void>(`${org(orgId)}/devices/phones/${enc(phoneId)}`, { method: "DELETE" }),
       stopPhone: (orgId, phoneId) => request<void>(`${org(orgId)}/devices/phones/${enc(phoneId)}/stop`, { json: {} }),
+      powerPhone: (orgId, phoneId, on) =>
+        request<void>(`${org(orgId)}/devices/phones/${enc(phoneId)}/power`, { json: { on } }),
       createLink: (orgId, kind) => request<ConnectLink>(`${org(orgId)}/devices/connect-links`, { json: { kind } }),
       link: (orgId, linkId) => request<ConnectLinkState>(`${org(orgId)}/devices/connect-links/${enc(linkId)}`),
       approveRequest: (orgId, requestId, input) =>
@@ -1423,6 +1429,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           `${org(orgId)}/machines/${enc(machineId)}/access/requests/${enc(requestId)}/refuse`,
           { json: {} },
         ),
+      askFolder: async (orgId, machineId, input) => {
+        await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/access/pick`, { json: input });
+      },
       checkClis: async (orgId, machineId) => {
         await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/clis/check`, { json: {} });
       },
@@ -1552,6 +1561,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         (
           await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {
             json: { url, paths, ...(forAgentId ? { forAgentId } : {}), ...(personal ? { personal } : {}) },
+          })
+        ).skills,
+      importPickedFile: async (orgId, fileId, paths, forAgentId, personal) =>
+        (
+          await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {
+            json: { fileId, paths, ...(forAgentId ? { forAgentId } : {}), ...(personal ? { personal } : {}) },
           })
         ).skills,
       importPickedZip: async (orgId, zipBase64, paths, personal, upload) =>

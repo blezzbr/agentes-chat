@@ -67,6 +67,7 @@ import {
   enableOperatorEvents,
   enableSvgRasterizer,
   ensureRightHands,
+  friendlyMachineNames,
   type GifKey,
   hasFontFiles,
   isAgentesCloud,
@@ -106,6 +107,7 @@ import { clientVitals } from "./client-vitals";
 import { buildEngine } from "./engine";
 import { watchEventLoopLag } from "./event-loop-lag";
 import { startFreezeWatch } from "./freeze-watch";
+import { trustPeer } from "./http/client-ip";
 import { checkHumanCheckAtBoot, createHumanCheck } from "./http/human-check";
 import { watchLoad } from "./load-shed";
 import { createLogger, type Logger } from "./logger";
@@ -119,6 +121,7 @@ import { createRealtime, type SocketData } from "./realtime/ws";
 import { takeRouteTimes } from "./route-times";
 import type { AppDeps } from "./routes/app/context";
 import { workerHealth } from "./routes/health";
+import { reportRunProfile } from "./run-reports";
 import { startTelemetry } from "./telemetry";
 import { releaseOf, version } from "./version";
 import { type BootTask, startWorkers } from "./workers";
@@ -460,7 +463,10 @@ async function boot(
     adapters,
     modelProviders,
     onTiming: (name, ms, attrs) => log.info("latency", { metric: name, ms, ...attrs }),
-    onRunProfile: (p) => log.debug("run profile", p),
+    onRunProfile: (p) => {
+      log.debug("run profile", { ...p });
+      void reportRunProfile(errors, p, async (id) => (await engine.machineHub.status(id))?.protocol).catch(() => {});
+    },
     emailArt,
     log,
     errors,
@@ -469,6 +475,8 @@ async function boot(
   await engine.jevKey.ready();
   await engine.githubApp.ready();
   await engine.speech.ready();
+  // Set up here before: the helper again, without waiting for it.
+  void engine.speechLocal?.resume();
   log.info("voice messages", { engines: engine.speech.chain().map((e) => e.id) });
   const vectors = engine.embeddings;
   if (config.EMBEDDINGS_PROVIDER !== "none" && !vectors) {
@@ -540,6 +548,15 @@ async function boot(
       run: async () => {
         const moved = await surfaceRoomFiles(database.db);
         if (moved > 0) log.info("files moved out of agent rooms", { moved });
+      },
+    },
+    // Computers still called by their host name take their model and owner's name ("MacBook Pro do Tomás").
+    {
+      name: "friendly-machine-names",
+      once: true,
+      run: async () => {
+        const renamed = await friendlyMachineNames(database.db, adapters.pubsub);
+        if (renamed > 0) log.info("computers named after their model and owner", { renamed });
       },
     },
   ];
@@ -650,6 +667,7 @@ async function boot(
       gifKey: gifKey ?? undefined,
       githubApp: engine.githubApp,
       speech: engine.speech,
+      speechLocal: engine.speechLocal,
       voice: engine.voice,
       gitProxy: engine.gitProxy,
       pushRelaySender: relayServeSender(direct),
@@ -732,7 +750,10 @@ async function boot(
         // Bun's default (10 s) cuts a request still waiting on its answer: opening a site in an agent's
         // browser waits for the page, and a closed browser starts first (up to 90 s on the computer).
         idleTimeout: 120,
-        fetch: (req, srv) => ownHostAnswer(req) ?? realtime.fetch(req, srv, (r) => app.fetch(r)),
+        fetch: (req, srv) => {
+          trustPeer(req.headers, srv.requestIP(req)?.address, config.TRUSTED_PROXIES);
+          return ownHostAnswer(req) ?? realtime.fetch(req, srv, (r) => app.fetch(r));
+        },
         websocket: realtime.websocket,
         // What the HTTP app doesn't answer itself: a WebSocket upgrade that failed before the socket opened.
         error(error) {

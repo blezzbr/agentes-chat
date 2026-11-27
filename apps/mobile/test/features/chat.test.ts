@@ -420,6 +420,13 @@ describe("working line", () => {
     expect(lines).toContain("bar: { width: 3, height: 12, borderRadius: 1.5, opacity: 0.7 },");
   });
 
+  test("opening a DM with an agent or a thread tells the server, as the web does: its agent gets ready", async () => {
+    const data = (await source("features/chat/screen/useChatData.ts")).replace(/\s+/g, " ");
+    expect(data).toContain(
+      "if (focused && readable && (dmAgentId || isThread)) connection?.sendOpen(channelId, threadId);",
+    );
+  });
+
   test("the phone tells the conversation while it records (held or hands free, not paused) and while the take uploads", async () => {
     const take = await source("features/voice/useVoiceTake.ts");
     const tick = take.slice(take.indexOf("const tick = useCallback("), take.indexOf("const record = useCallback("));
@@ -578,11 +585,11 @@ describe("working line", () => {
     const atlas = run({ runId: "s", agentId: "atlas" });
     expect(barWords(en, workingEntries([ada], [], name), markName)[0]).toBe(markName("Ada"));
     expect(barWords(en, workingEntries([ada, atlas], [], name))[0]).toBe("Ada and Atlas are working…");
-    // The agent at work leads it with its face and its rings (`OrbitFace`, not the pixel orbit); the stack's small faces
-    // are the others.
+    // Whoever does the work leads it with its face and its rings (`OrbitFace`, not the pixel orbit); the stack's small
+    // faces are the others.
     const lines = await source("features/chat/LiveRows.tsx");
     const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
-    expect(line).toContain("const faces = barFaces(entries).filter((e) => e !== orbiting);");
+    expect(line).toContain("const faces = barFaces(entries).filter((e) => e !== lead);");
     expect(line).toContain("<OrbitFace ");
     expect(line).not.toContain("PixelOrbit");
   });

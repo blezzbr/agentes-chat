@@ -32,10 +32,6 @@ export const strings: Partial<PushStrings> = {
   machineConnectedTitle: "新しいコンピューターがワークスペースに追加されました",
   computerReadyTitle: "ワークスペースのコンピューターの準備ができました",
   computerReadyBody: "エージェントのページを開くと、ライブで見られます。",
-  computerDownTitle: (n) => `${n}が応答していません`,
-  computerDownBody: "このコンピューターでのエージェントの作業が待機中です。タップして対処方法を確認してください。",
-  computerBackTitle: (n) => `${n}が復旧しました`,
-  computerBackBody: (away) => `${away}応答がありませんでした。待機していた作業を再開します。`,
   browserHandoffTitle: (a) => `${a} がブラウザであなたの助けを求めています`,
   browserHandoffReminderTitle: (a) => `${a} がまだブラウザであなたを待っています`,
   browserHandoffBody: "タップして画面を開く",
@@ -95,11 +91,13 @@ export const strings: Partial<PushStrings> = {
     f ? `${a} があなたの ${d} で ${f} を求めています` : `${a} があなたの ${d} でフォルダを求めています`,
   deviceFolderBody: "そのコンピューターのアプリで許可してください。",
   adminAskTitle: (a, what, l) =>
-    what === "channel_agent"
-      ? `${a} が #${l} にエージェントを追加するよう求めています`
-      : what === "create_agents"
-        ? `${a} がエージェントを作成できるよう求めています`
-        : `${a} がルーティン用の ${l} Webhook の設定を求めています`,
+    what === "voice"
+      ? `${a} がボイスメッセージをオンにするよう求めています`
+      : what === "channel_agent"
+        ? `${a} が #${l} にエージェントを追加するよう求めています`
+        : what === "create_agents"
+          ? `${a} がエージェントを作成できるよう求めています`
+          : `${a} がルーティン用の ${l} Webhook の設定を求めています`,
   deviceWaitingTitle: (p, d) => `${p} のエージェントがあなたの ${d} を待っています`,
   deviceWaitingBody: "戻ったら始まります。",
   teamWeekReady: "チームの1週間のまとめができました",

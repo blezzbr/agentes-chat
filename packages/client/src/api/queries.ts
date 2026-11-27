@@ -170,6 +170,7 @@ import type {
   JevKey,
   JevKeyInput,
   JoinRequest,
+  LocalSpeech,
   Machine,
   MachineAccessReduce,
   MachinePause,
@@ -618,6 +619,44 @@ function useSpeechKeyChange<T>(change: (api: ApiClient, input: T) => Promise<Spe
 export const useSaveSpeechKey = () =>
   useSpeechKeyChange((api, input: SpeechKeyInput) => api.system.saveSpeechKey(input), true);
 export const useRemoveSpeechKey = () => useSpeechKeyChange<void>((api) => api.system.removeSpeechKey());
+
+/** The speech model on this server's computer (ADR 0100), for its owner; polled while it downloads or starts. */
+export const useSpeechLocal = (enabled = true) => {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: keys.speechLocal,
+    enabled,
+    queryFn: async () => {
+      const was = qc.getQueryData<LocalSpeech | null>(keys.speechLocal)?.status.state;
+      const view = await api.system.speechLocal();
+      // Ready or failed now: `speechState` changed in every workspace.
+      if (was && was !== view?.status.state) {
+        void qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === "org" && q.queryKey[2] === "settings" });
+      }
+      return view;
+    },
+    refetchInterval: (q) => {
+      const s = q.state.data?.status.state;
+      return s === "downloading" || s === "starting" ? 1000 : false;
+    },
+  });
+};
+
+function useSpeechLocalChange(change: (api: ApiClient) => Promise<LocalSpeech>) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => change(api),
+    onSuccess: (view) => {
+      qc.setQueryData(keys.speechLocal, view);
+      // `speechState` follows it in every workspace.
+      void qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === "org" && q.queryKey[2] === "settings" });
+    },
+  });
+}
+export const useInstallSpeechLocal = () => useSpeechLocalChange((api) => api.system.installSpeechLocal());
+export const useRemoveSpeechLocal = () => useSpeechLocalChange((api) => api.system.removeSpeechLocal());
 
 /**
  * The server's Web Push key (ADR 0071): `null` when this server has Web Push off. Asked only where this
@@ -1716,6 +1755,11 @@ export const useChannelMembers = (orgId: string, channelId: string, enabled = tr
 
 /** Messages per page: the latest page, then older pages on scroll-up. */
 export const MESSAGES_PAGE = 100;
+/**
+ * A conversation's next page loads while this many screens are still left to scroll, web and phone: asked for only at
+ * its edge, a quick scroll stopped there and waited for it.
+ */
+export const PAGE_AHEAD_SCREENS = 3;
 /** A thread's root and replies, in one read. */
 export const THREAD_PAGE = 200;
 
@@ -4022,6 +4066,8 @@ export const usePeopleUsage = (orgId: string, period: { since?: string; until?: 
     queryKey: keys.peopleUsage(orgId, period),
     queryFn: () => api.orgs.peopleUsage(orgId, period),
     enabled,
+    // Another period keeps the last one on screen while it loads.
+    placeholderData: (prev) => prev,
     // ponytail: "Agora" polls; the runs' realtime events could refresh it instead.
     refetchInterval: 15_000,
   });
@@ -6396,12 +6442,17 @@ export function useSkillUsage(orgId: string, enabled: boolean) {
 type SkillChange =
   | {
       type: "import";
-      input: ({ url: string; list?: boolean; forAgentId?: string } | { zipBase64: string }) & {
+      input: (
+        | { url: string; list?: boolean; forAgentId?: string }
+        | { zipBase64: string }
+        | { fileId: string; list?: boolean; forAgentId?: string }
+      ) & {
         personal?: boolean;
       };
       upload?: UploadOptions;
     }
   | { type: "importPicked"; url: string; paths: string[]; forAgentId?: string; personal?: boolean }
+  | { type: "importPickedFile"; fileId: string; paths: string[]; forAgentId?: string; personal?: boolean }
   | { type: "importPickedZip"; zipBase64: string; paths: string[]; personal?: boolean; upload?: UploadOptions }
   | { type: "create"; input: SkillInput }
   | { type: "update"; id: string; patch: SkillPatch }
@@ -6425,6 +6476,8 @@ export function useSkillAction(orgId: string, { silent = false } = {}) {
           return api.skills.import(orgId, action.input, action.upload);
         case "importPicked":
           return api.skills.importPicked(orgId, action.url, action.paths, action.forAgentId, action.personal);
+        case "importPickedFile":
+          return api.skills.importPickedFile(orgId, action.fileId, action.paths, action.forAgentId, action.personal);
         case "importPickedZip":
           return api.skills.importPickedZip(orgId, action.zipBase64, action.paths, action.personal, action.upload);
         case "create":
@@ -6854,6 +6907,16 @@ export function useRefuseFolderRequest(orgId: string) {
       api.machines.refuseFolder(orgId, machineId, requestId),
     meta: { silent: true },
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.notifications(orgId) }),
+  });
+}
+
+/** "Liberar uma pasta": the agentes.chat app on the computer asks the person there to pick one (`askFolder`). */
+export function useAskMachineFolder(orgId: string) {
+  const api = useApi();
+  return useMutation({
+    mutationFn: ({ machineId, ...input }: { machineId: string; agentId?: string; requestId?: string }) =>
+      api.machines.askFolder(orgId, machineId, input),
+    meta: { silent: true },
   });
 }
 

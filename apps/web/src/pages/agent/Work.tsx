@@ -18,6 +18,13 @@ import { ownSignInName } from "@agenteschat/client/lib/ai-accounts";
 import { effortOf } from "@agenteschat/client/lib/brain-advanced";
 import { computerNameOf, setupPortrait, WORKSPACE_COMPUTER_KIND } from "@agenteschat/client/lib/computer";
 import {
+  LEGACY_MOVE,
+  maintenanceLine,
+  maintenanceNamed,
+  maintenanceOf,
+  maintenanceShort,
+} from "@agenteschat/client/lib/computer-maintenance";
+import {
   allowsInApp,
   commandInReason,
   computerKind,
@@ -44,7 +51,6 @@ import {
   Dialog,
   DialogBody,
   DialogFooter,
-  GroupHeading,
   Icon,
   type IconName,
   Input,
@@ -248,8 +254,9 @@ export function WorkCard({
   );
   return (
     <div className="agp-work">
-      <GroupHeading id="agp-ficha-work" title={t("agentPage.work.cell.label", g)} />
-      <section className="agp-workcard agp-ficha__card" aria-labelledby="agp-ficha-work">
+      {/* No title over the card: its top meets the cards beside it ("What Theo does"), and its cells say what they
+          are; the title stays its name for screen readers. */}
+      <section className="agp-workcard agp-ficha__card" aria-label={t("agentPage.work.cell.label", g)}>
         {before}
         {/* The Cloud's agents all work on the workspace's own computer, whose state the page's computer entry says:
               nothing to pick, so no cell. */}
@@ -319,9 +326,11 @@ export function WorkCard({
       {machine && !machine.online && kind !== "model" && (
         <SettingNote icon="pause">
           {machineRow?.moving
-            ? t("machines.moving.named", {
-                computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
-              })
+            ? maintenanceNamed(
+                t,
+                maintenanceOf(machineRow) ?? LEGACY_MOVE,
+                computerNameOf(t, org.name, machine.name, isPersonal(org)),
+              )
             : edition === "cloud"
               ? t("agentPage.work.offlineCloud", {
                   ...g,
@@ -342,8 +351,7 @@ export function WorkCard({
 
 /**
  * The agent may use apps on its desktop, and its Linux computer says what that still lacks there (ADR 0062):
- * the computer's own words, with the command in them to copy. Mac and Windows computers never have it, which
- * their own page says.
+ * the computer's own words, with the command in them to copy. Mac and Windows computers never have it.
  */
 function DesktopUseNote({ machine: m }: { machine: Machine }) {
   const { t } = useTranslation();
@@ -606,14 +614,16 @@ function ComputerForm({ onClose }: { onClose: () => void }) {
       ...(brain !== "model" && !has(id, brain)
         ? [t("agentPage.work.computer.alsoBrain", { brain: t(`brain.card.${brain}`) })]
         : []),
-      ...(m && !m.online ? [m.moving ? t("machines.moving.line") : t("agentPage.work.computer.alsoOffline", g)] : []),
+      ...(m && !m.online
+        ? [m.moving ? maintenanceLine(t, maintenanceOf(m) ?? LEGACY_MOVE) : t("agentPage.work.computer.alsoOffline", g)]
+        : []),
     ];
   };
   const status = (m: Machine) =>
     m.online
       ? t("agentPage.work.computer.online")
       : m.moving
-        ? t("machines.moving.short")
+        ? maintenanceShort(t, maintenanceOf(m) ?? LEGACY_MOVE)
         : t("agentPage.work.computer.offline");
   const chosen = pickable.find((m) => m.id === choice);
   const use = async () => {

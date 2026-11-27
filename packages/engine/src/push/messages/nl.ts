@@ -32,10 +32,6 @@ export const strings: Partial<PushStrings> = {
   machineConnectedTitle: "Er is een nieuwe computer bij de werkruimte gekomen",
   computerReadyTitle: "De computer van je werkruimte staat klaar",
   computerReadyBody: "Open de pagina van een agent om hem live te zien.",
-  computerDownTitle: (n) => `${n} reageert niet`,
-  computerDownBody: "Het werk van je agents erop wacht. Tik om te zien wat je kunt doen.",
-  computerBackTitle: (n) => `${n} is terug`,
-  computerBackBody: (away) => `Hij was ${away} weg. Het werk dat wachtte gaat nu verder.`,
   browserHandoffTitle: (a) => `${a} heeft je nodig in de browser`,
   browserHandoffReminderTitle: (a) => `${a} heeft je nog nodig in de browser`,
   browserHandoffBody: "Tik om het scherm te openen.",
@@ -93,11 +89,13 @@ export const strings: Partial<PushStrings> = {
   deviceFolderTitle: (a, f, d) => (f ? `${a} vraagt om ${f} op je ${d}` : `${a} vraagt om een map op je ${d}`),
   deviceFolderBody: "Sta het toe in de app op die computer.",
   adminAskTitle: (a, what, l) =>
-    what === "channel_agent"
-      ? `${a} vraagt je een agent toe te voegen aan #${l}`
-      : what === "create_agents"
-        ? `${a} vraagt om agents te mogen maken`
-        : `${a} vraagt je de ${l}-webhook voor routines in te stellen`,
+    what === "voice"
+      ? `${a} vraagt je spraakberichten aan te zetten`
+      : what === "channel_agent"
+        ? `${a} vraagt je een agent toe te voegen aan #${l}`
+        : what === "create_agents"
+          ? `${a} vraagt om agents te mogen maken`
+          : `${a} vraagt je de ${l}-webhook voor routines in te stellen`,
   deviceWaitingTitle: (p, d) => `De agent van ${p} wacht op je ${d}`,
   deviceWaitingBody: "Hij begint zodra die terug is.",
   teamWeekReady: "De week van je team staat klaar",

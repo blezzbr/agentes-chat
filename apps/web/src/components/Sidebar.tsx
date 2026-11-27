@@ -92,7 +92,7 @@ import {
   MenuSub,
   modKey,
   OPEN_LAYER,
-  PixelSpinner,
+  OrbitGlyph,
   Popover,
   PresenceBadge,
   ProviderLogo,
@@ -137,6 +137,7 @@ import type { MenuEntry } from "@/lib/context-menu";
 import { onPhoneAsk, takePhoneAsk, thisMac } from "@/lib/desktop";
 import { entityMenu } from "@/lib/entity-menu";
 import { lazyDialog } from "@/lib/lazy-dialog";
+import { lookOf } from "@/lib/look";
 import { navigateAway } from "@/lib/navigate";
 import { useOpenParam } from "@/lib/open-param";
 import { markOpen } from "@/lib/perf";
@@ -163,6 +164,7 @@ import { ArchivedChannelsDialog } from "./ArchivedChannelsDialog";
 import { FeedbackMark } from "./arrival/FeedbackDialog";
 import { MenuEntries } from "./DesktopMenus";
 import { useAgentMenu, useChannelMenu, usePersonMenu } from "./entity-menus";
+import { GroupFace } from "./GroupFace";
 import { useInviteDialog } from "./invite/InviteDialog";
 import { arrivalProps, useArrivals } from "./lodi-cursor/arrivals";
 import { useRowsDrawIn } from "./lodi-cursor/runner";
@@ -923,8 +925,6 @@ export function Sidebar() {
       data-rail={rail}
       data-float={float || undefined}
       ref={sideRef}
-      // Its faces' sizes follow the mode (the agents' and New agent's, ADR 0164).
-      data-personal={personal || undefined}
       {...drawer?.navProps}
     >
       <div className="sidebar__top">
@@ -1229,6 +1229,8 @@ function useSidebarChannels({
   );
   useArrivals();
   const mayChange = (c: Channel) => managesChannel(c, me.user.id, org);
+  // A personal workspace's group conversations (ADR 0159): their agents as their face, their names as written.
+  const personal = isPersonal(org);
   const drag = useRef<string | null>(null);
   const [mark, setMark] = useState<DropMark>(null);
   const failed = (e: unknown) => toast.show(errorText(t, e), "error");
@@ -1387,8 +1389,8 @@ function useSidebarChannels({
         key={c.id}
         to="/org/$orgId/c/$channelId"
         params={{ orgId, channelId: c.id }}
-        className="sidebar__item"
-        title={`#${c.name}`}
+        className={personal ? "sidebar__item sidebar__group-row" : "sidebar__item"}
+        title={personal ? c.name : `#${c.name}`}
         {...(plain ? outer : {})}
         data-kind="channel"
         data-unread={unread}
@@ -1413,10 +1415,16 @@ function useSidebarChannels({
         onClick={() => markOpen(c.id)}
         {...entityMenu(() => channelEntries(c, sectorEntries(c)))}
       >
-        <Icon name="channel" className="sidebar__channel-icon" />
-        <span className="sidebar__channel-abbr" aria-hidden="true">
-          {channelInitials(c.name)}
-        </span>
+        {personal ? (
+          <GroupFace agentIds={c.agentIds ?? []} count={c.agentCount} />
+        ) : (
+          <>
+            <Icon name="channel" className="sidebar__channel-icon" />
+            <span className="sidebar__channel-abbr" aria-hidden="true">
+              {channelInitials(c.name)}
+            </span>
+          </>
+        )}
         <span className="sidebar__item-label">{c.name}</span>
         {mentions > 0 ? (
           <UnreadCount count={mentions} mentions />
@@ -1753,9 +1761,9 @@ function AgentRow({
   // Listed for who manages it though it doesn't talk to them (its DM opens, `opensDm`): the line says who it talks to.
   const locked = !canTalk(a);
   const names = locked ? audienceNames(a, (id) => dir.memberById.get(id)?.name, dir.roleName) : [];
-  // Working: the pixel orbit in its color beside its name (what it is on in its label and the row's title), so the
-  // row never changes height.
-  const working = busy || shown?.line?.kind === "work";
+  // Working: its face wears the orbit (what it is on is in the row's title), so the row never changes height; the
+  // orbit says it, so the face's "working" badge steps aside.
+  const working = busy || shown?.line?.kind === "work" || shown?.presence === "working";
   const now = busy
     ? here
       ? t("sidebarAgents.workingIn", { channel: here })
@@ -1776,18 +1784,30 @@ function AgentRow({
           ? t("sidebarAgents.talksOnly", { name: names[0] })
           : chip
       : a.role);
-  // Its title: who it is over what it does, whole ("Ajudando a Ada · #vendas · 22 min", "Retorno às 00:32 · #vendas").
+  // Its title: who it is over what it does, whole ("Working · helping Ada · #sales · 22 min", "Back at 00:32 · #sales"):
+  // the line under the name only says the status.
   const place =
     (work?.forAgentId || work?.state === "later") && work.channelId
       ? (work.channelName ?? channelName(work.channelId))
       : undefined;
   const doingTitle = doing
-    ? [upperFirst(doing.text, i18n.language), place && `#${place}`, doing.time].filter(Boolean).join(" · ")
+    ? [upperFirst(doing.text, i18n.language), doing.place, place && `#${place}`, doing.time].filter(Boolean).join(" · ")
     : null;
   const title = doingTitle
     ? `${[a.name, a.role].filter(Boolean).join(" · ")}\n${doingTitle}`
     : [a.name, a.role, now ?? word, line?.text].filter(Boolean).join(" · ");
   const roleTag = !locked && !out;
+  const face = (
+    <AgentAvatar
+      agentId={a.id}
+      name={a.name}
+      size="sm"
+      presence={working && shown?.presence === "working" ? null : (shown?.presence ?? null)}
+      presenceLabel={word ?? undefined}
+      asleep={isOutOfOffice(shown?.line)}
+      {...(waitingFor ? { state: "idle" as const, expression: "closed" as const } : {})}
+    />
+  );
   return (
     <div
       className="sidebar__row"
@@ -1813,27 +1833,13 @@ function AgentRow({
       >
         {busy && <AgentTrail color={color} />}
         {busy && <AgentGlow color={color} />}
-        <AgentAvatar
-          agentId={a.id}
-          name={a.name}
-          size="sm"
-          presence={shown?.presence ?? null}
-          presenceLabel={word ?? undefined}
-          asleep={isOutOfOffice(shown?.line)}
-          {...(waitingFor ? { state: "idle" as const, expression: "closed" as const } : {})}
-        />
+        {working ? <OrbitGlyph appearance={lookOf(a)}>{face}</OrbitGlyph> : face}
         <span className="sidebar__item-text">
-          <span className={doing || under ? "sidebar__item-label ac-captop" : "sidebar__item-label"}>
-            {a.name}
-            {working && (
-              <PixelSpinner
-                size={14}
-                color={color}
-                label={state === "idle" && doingTitle ? doingTitle : now}
-                className="sidebar__item-spin"
-              />
-            )}
-          </span>
+          <span className={doing || under ? "sidebar__item-label ac-captop" : "sidebar__item-label"}>{a.name}</span>
+          {/* What it is on, for screen readers, after its name (the orbit before it says it to the eye). */}
+          {working && (state === "idle" && doingTitle ? doingTitle : now) && (
+            <span className="ac-visually-hidden">{state === "idle" && doingTitle ? doingTitle : now}</span>
+          )}
           {doing ? (
             <AgentWorkLine line={doing} className="sidebar__item-role" />
           ) : (
@@ -2240,10 +2246,12 @@ function AccountMenu({ personal = false }: { personal?: boolean }) {
 /**
  * A workspace in your lists of them (ADR 0159): a personal one of yours is you, by your photo and your name, as its
  * sidebar shows you; with more than one, your photo and each one's own name (the same name on each would tell them
- * apart by nothing). Any other (a team's, or a personal one shared with you, whose face would be someone else's) by its
- * mark and its name.
+ * apart by nothing). Its line (`sub`) says it is personal where the full menu shows your role in a team's, so its row
+ * is the same two lines as theirs. Any other (a team's, or a personal one shared with you, whose face would be someone
+ * else's) by its mark and its name.
  */
 function useWorkspaceLook() {
+  const { t } = useTranslation();
   const { me } = useOrg();
   const mine = (id: string) => {
     const o = me.organizations.find((m) => m.id === id);
@@ -2259,7 +2267,7 @@ function useWorkspaceLook() {
       ? {
           leading: <Avatar kind="person" name={me.user.name} imageUrl={me.user.image} size={face} />,
           name: several ? o.name : me.user.name,
-          sub: null,
+          sub: t("settings.mode.personal"),
           personal: true,
         }
       : {
@@ -2275,8 +2283,8 @@ function useWorkspaceLook() {
  * Your workspaces in the account menu of a personal workspace (ADR 0159): the workspace menu's list, then New
  * workspace when the person may make one. In the desktop app (ADR 0154) by server, then Add workspace; New workspace
  * (it makes one here) sits under this server's workspaces only on a server of one's own, since on agentes.chat Add
- * workspace makes one (`offersNewWorkspace`). Mounted only while the menu is open: the counts load then. No role beside
- * each: one person's own workspaces.
+ * workspace makes one (`offersNewWorkspace`). Mounted only while the menu is open: the counts load then. One line a
+ * row (no role, no "Personal" under it): one person's own workspaces.
  */
 function MenuWorkspaces() {
   const { t, i18n } = useTranslation();
@@ -2322,7 +2330,7 @@ function MenuWorkspaces() {
                 <MenuItem
                   key={o.id}
                   leading={shown.leading}
-                  description={[shown.sub, g.here ? notes.get(o.id) : null].filter(Boolean).join(" · ") || undefined}
+                  description={(g.here && notes.get(o.id)) || undefined}
                   hint={
                     o.current ? t("shell.youAreHere") : o.unread > 0 ? <CountChip>{o.unread}</CountChip> : undefined
                   }
@@ -2360,7 +2368,7 @@ function MenuWorkspaces() {
           <MenuItem
             key={o.id}
             leading={shown.leading}
-            description={[shown.sub, notes.get(o.id)].filter(Boolean).join(" · ") || undefined}
+            description={notes.get(o.id)}
             hint={o.id === org.id ? t("shell.youAreHere") : undefined}
             onSelect={() => o.id !== org.id && go(o.id)}
           >

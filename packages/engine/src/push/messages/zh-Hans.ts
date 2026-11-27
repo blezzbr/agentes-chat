@@ -32,10 +32,6 @@ export const strings: Partial<PushStrings> = {
   machineConnectedTitle: "一台新电脑加入了工作区",
   computerReadyTitle: "你的工作区的电脑已就绪",
   computerReadyBody: "打开智能体页面即可实时查看。",
-  computerDownTitle: (n) => `${n} 没有响应`,
-  computerDownBody: "智能体在这台电脑上的工作正在等待。点按查看该怎么做。",
-  computerBackTitle: (n) => `${n} 已恢复`,
-  computerBackBody: (away) => `离线了 ${away}。等待中的工作现在继续。`,
   browserHandoffTitle: (a) => `${a} 需要你在浏览器中帮忙`,
   browserHandoffReminderTitle: (a) => `${a} 仍在等你到浏览器中帮忙`,
   browserHandoffBody: "点按打开画面。",
@@ -92,11 +88,13 @@ export const strings: Partial<PushStrings> = {
   deviceFolderTitle: (a, f, d) => (f ? `${a} 请你在你的 ${d} 上开放 ${f}` : `${a} 请你在你的 ${d} 上开放一个文件夹`),
   deviceFolderBody: "在那台电脑的 App 里允许它。",
   adminAskTitle: (a, what, l) =>
-    what === "channel_agent"
-      ? `${a} 请你把一个智能体加入 #${l}`
-      : what === "create_agents"
-        ? `${a} 请求获得创建智能体的权限`
-        : `${a} 请你为例行任务设置 ${l} webhook`,
+    what === "voice"
+      ? `${a} 请你开启语音消息`
+      : what === "channel_agent"
+        ? `${a} 请你把一个智能体加入 #${l}`
+        : what === "create_agents"
+          ? `${a} 请求获得创建智能体的权限`
+          : `${a} 请你为例行任务设置 ${l} webhook`,
   deviceWaitingTitle: (p, d) => `${p} 的智能体正在等待你的 ${d}`,
   deviceWaitingBody: "它回来后就会开始。",
   teamWeekReady: "你的团队周报已准备好",

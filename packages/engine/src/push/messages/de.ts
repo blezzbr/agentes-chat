@@ -33,10 +33,6 @@ export const strings: Partial<PushStrings> = {
   machineConnectedTitle: "Ein neuer Computer ist dem Workspace beigetreten",
   computerReadyTitle: "Der Computer deines Workspace ist bereit",
   computerReadyBody: "Öffne die Seite eines Agenten, um ihn live zu sehen.",
-  computerDownTitle: (n) => `${n} antwortet nicht`,
-  computerDownBody: "Die Arbeit deiner Agenten auf diesem Computer wartet. Tippe, um zu sehen, was du tun kannst.",
-  computerBackTitle: (n) => `${n} ist wieder da`,
-  computerBackBody: (away) => `Er war ${away} weg. Die wartende Arbeit läuft jetzt weiter.`,
   browserHandoffTitle: (a) => `${a} braucht dich im Browser`,
   browserHandoffReminderTitle: (a) => `${a} braucht dich noch im Browser`,
   browserHandoffBody: "Tippe, um den Bildschirm zu öffnen.",
@@ -94,11 +90,13 @@ export const strings: Partial<PushStrings> = {
     f ? `${a} bittet um ${f} auf deinem ${d}` : `${a} bittet um einen Ordner auf deinem ${d}`,
   deviceFolderBody: "Erlaube ihn in der App auf dem Computer.",
   adminAskTitle: (a, what, l) =>
-    what === "channel_agent"
-      ? `${a} bittet dich, einen Agenten zu #${l} hinzuzufügen`
-      : what === "create_agents"
-        ? `${a} möchte Agenten erstellen dürfen`
-        : `${a} bittet dich, den ${l}-Webhook für Routinen einzurichten`,
+    what === "voice"
+      ? `${a} bittet dich, Sprachnachrichten einzuschalten`
+      : what === "channel_agent"
+        ? `${a} bittet dich, einen Agenten zu #${l} hinzuzufügen`
+        : what === "create_agents"
+          ? `${a} möchte Agenten erstellen dürfen`
+          : `${a} bittet dich, den ${l}-Webhook für Routinen einzurichten`,
   deviceWaitingTitle: (p, d) => `Der Agent von ${p} wartet auf dein ${d}`,
   deviceWaitingBody: "Er startet, sobald es zurück ist.",
   teamWeekReady: "Die Woche deines Teams ist fertig",

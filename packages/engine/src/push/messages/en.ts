@@ -31,11 +31,6 @@ export interface PushStrings {
   machineConnectedTitle: string;
   computerReadyTitle: string;
   computerReadyBody: string;
-  /** A computer the agents work on is away (`name`: its name), and back after `away` ("42 min"). */
-  computerDownTitle: (name: string) => string;
-  computerDownBody: string;
-  computerBackTitle: (name: string) => string;
-  computerBackBody: (away: string) => string;
   browserHandoffTitle: (actor: string) => string;
   browserHandoffReminderTitle: (actor: string) => string;
   browserHandoffBody: string;
@@ -89,7 +84,7 @@ export interface PushStrings {
    */
   deviceFolderTitle: (a: string, f: string, d: string) => string;
   deviceFolderBody: string;
-  /** `admin_ask`: `a` asks who may do it (`what`: channel_agent, create_agents, webhook; `l` the channel or service). */
+  /** `admin_ask`: `a` asks who may do it (`what`: channel_agent, create_agents, webhook, voice; `l` the channel or service). */
   adminAskTitle: (a: string, what: string, l: string) => string;
   deviceWaitingTitle: (person: string, device: string) => string;
   deviceWaitingBody: string;
@@ -162,10 +157,6 @@ export const en: PushStrings = {
   machineConnectedTitle: "A new computer joined the workspace",
   computerReadyTitle: "Your workspace's computer is ready",
   computerReadyBody: "Open an agent's page to see it live.",
-  computerDownTitle: (n) => `${n} isn't answering`,
-  computerDownBody: "Your agents' work on it is waiting. Tap to see what to do.",
-  computerBackTitle: (n) => `${n} is back`,
-  computerBackBody: (away) => `It was away for ${away}. The work that waited goes on now.`,
   browserHandoffTitle: (a) => `${a} needs you in the browser`,
   browserHandoffReminderTitle: (a) => `${a} still needs you in the browser`,
   browserHandoffBody: "Tap to open the screen.",
@@ -222,11 +213,13 @@ export const en: PushStrings = {
   deviceFolderTitle: (a, f, d) => (f ? `${a} asks for ${f} on your ${d}` : `${a} asks for a folder on your ${d}`),
   deviceFolderBody: "Allow it in the app on that computer.",
   adminAskTitle: (a, what, l) =>
-    what === "channel_agent"
-      ? `${a} asks you to add an agent to #${l}`
-      : what === "create_agents"
-        ? `${a} asks to be able to create agents`
-        : `${a} asks you to set up the ${l} webhook for routines`,
+    what === "voice"
+      ? `${a} asks you to turn on voice messages`
+      : what === "channel_agent"
+        ? `${a} asks you to add an agent to #${l}`
+        : what === "create_agents"
+          ? `${a} asks to be able to create agents`
+          : `${a} asks you to set up the ${l} webhook for routines`,
   deviceWaitingTitle: (p, d) => `${p}'s agent is waiting for your ${d}`,
   deviceWaitingBody: "It starts when it's back.",
   teamWeekReady: "Your team's week is ready",

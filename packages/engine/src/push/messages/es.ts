@@ -32,10 +32,6 @@ export const strings: Partial<PushStrings> = {
   machineConnectedTitle: "Una computadora nueva se unió al espacio de trabajo",
   computerReadyTitle: "La computadora de tu espacio de trabajo está lista",
   computerReadyBody: "Abre la página de un agente para verla en vivo.",
-  computerDownTitle: (n) => `${n} no responde`,
-  computerDownBody: "El trabajo de tus agentes en ella está en espera. Toca para ver qué hacer.",
-  computerBackTitle: (n) => `${n} volvió`,
-  computerBackBody: (away) => `Estuvo fuera ${away}. El trabajo que esperaba sigue ahora.`,
   browserHandoffTitle: (a) => `${a} te necesita en el navegador`,
   browserHandoffReminderTitle: (a) => `${a} aún te necesita en el navegador`,
   browserHandoffBody: "Toca para abrir la pantalla.",
@@ -92,11 +88,13 @@ export const strings: Partial<PushStrings> = {
   deviceFolderTitle: (a, f, d) => (f ? `${a} pide ${f} en tu ${d}` : `${a} pide una carpeta en tu ${d}`),
   deviceFolderBody: "Permítelo en la app de ese ordenador.",
   adminAskTitle: (a, what, l) =>
-    what === "channel_agent"
-      ? `${a} te pide añadir un agente a #${l}`
-      : what === "create_agents"
-        ? `${a} pide poder crear agentes`
-        : `${a} te pide configurar el webhook de ${l} para rutinas`,
+    what === "voice"
+      ? `${a} te pide activar los mensajes de voz`
+      : what === "channel_agent"
+        ? `${a} te pide añadir un agente a #${l}`
+        : what === "create_agents"
+          ? `${a} pide poder crear agentes`
+          : `${a} te pide configurar el webhook de ${l} para rutinas`,
   deviceWaitingTitle: (p, d) => `El agente de ${p} está esperando tu ${d}`,
   deviceWaitingBody: "Empieza cuando vuelva.",
   teamWeekReady: "Tu semana del equipo está lista",
