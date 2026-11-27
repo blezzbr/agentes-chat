@@ -33,7 +33,14 @@ if changed '^deploy/'; then tests+=(deploy/deploy.test.ts); fi
 
 while IFS= read -r path; do
   if [[ "$path" =~ ^(apps|packages|deploy|scripts)/[[:alnum:]_./@+-]+\.test\.(ts|tsx|js|mjs)$ ]] && [[ -f "$path" ]]; then
-    tests+=("$path")
+    covered=false
+    for suite in "${tests[@]}"; do
+      if [[ "$path" == "$suite" || "$path" == "$suite/"* ]]; then
+        covered=true
+        break
+      fi
+    done
+    if [[ "$covered" == false ]]; then tests+=("$path"); fi
   fi
 done <<< "$paths"
 
